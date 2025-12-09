@@ -1,8 +1,19 @@
 # Software Requirements Specification (SRS)
-**Project Name:** [Insert Project Name Here]
+
+**Project Name:** [To be de decided]
 **Version:** 1.0
-**Status:** [Draft / Under Review / Approved]
-**Date:** [YYYY-MM-DD]
+**Status:** [working]
+**Date:** 2025-12-09
+
+---
+
+### Maintainer & Contact Information
+| Field | Details |
+| :--- | :--- |
+| **Maintainer** | Vasudev Kishor |
+| **Roll Number** | `CB.SC.U4CSE23151` |
+| **Official Email** | [cb.sc.u4cse23151@cb.students.amrita.edu](mailto:cb.sc.u4cse23151@cb.students.amrita.edu) |
+| **Personal Email** | [vasudevkishor@gmail.com](mailto:vasudevkishor@gmail.com) |
 
 ---
 
@@ -41,8 +52,8 @@ Is this a new product? Is it a follow-up to an existing product? Is it part of a
 
 ### 2.3 Operating Environment
 * **Client:** iOS 15+, Android 12+, Modern Web Browsers (Chrome, Firefox, Safari).
-* **Server:** Node.js running on AWS EC2.
-* **Database:** PostgreSQL.
+* **Server:** Node.js running on AWS EC2 (or similar).
+* **Database:** PostgreSQL / MongoDB / MySQL.
 
 ---
 
@@ -57,28 +68,28 @@ Is this a new product? Is it a follow-up to an existing product? Is it part of a
 | **FR-02** | The system shall send a verification email upon registration. | Medium |
 | **FR-03** | The system shall allow users to reset their forgotten passwords. | High |
 
-### 3.2 [Feature Name, e.g., Shopping Cart]
+### 3.2 [Feature Name, e.g., Main Dashboard]
 **Description:** [Brief description of the feature]
 
 | ID | Requirement | Priority |
 | :--- | :--- | :--- |
-| **FR-04** | The system shall allow users to add items to a cart. | High |
-| **FR-05** | The system shall calculate the total cost including tax. | High |
+| **FR-04** | The system shall allow users to view [data points]. | High |
+| **FR-05** | The system shall allow users to export data to PDF. | Low |
 
 ---
 
 ## 4. Non-Functional Requirements
 
 ### 4.1 Performance
-* The system shall load the dashboard in under **2 seconds** on a 4G network.
-* The system shall support **1,000 concurrent users** without degradation.
+* The system shall load the dashboard in under **2 seconds** on a standard network.
+* The system shall support **[X] concurrent users** without degradation.
 
 ### 4.2 Security
-* All passwords must be hashed using **bcrypt** before storage.
+* All passwords must be hashed (e.g., using bcrypt) before storage.
 * Communication between client and server must be encrypted via **HTTPS**.
 
 ### 4.3 Availability
-* The system shall have an uptime of **99.9%** during business hours.
+* The system shall have an uptime of **99.9%**.
 
 ---
 
@@ -89,8 +100,8 @@ Is this a new product? Is it a follow-up to an existing product? Is it part of a
 * The primary color scheme shall be [Color Hex Codes].
 
 ### 5.2 Software Interfaces
-* **Payment Gateway:** Stripe API (v2.0)
-* **Maps:** Google Maps SDK
+* **Database:** [SQL/NoSQL database name]
+* **External APIs:** [List APIs, e.g., Google Maps, Stripe]
 
 ---
 
