@@ -1,6 +1,6 @@
 # Software Requirements Specification (SRS)
 
-**Project Name:** Unified API Observability & Automation Platform
+**Project Name:** Unified API debugging , Distributed Tracing and scenario automation platform (beyond postman/ hoppscotch)
 **Version:** 1.0
 **Status:** Draft
 **Date:** 2025-12-09
