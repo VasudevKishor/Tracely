@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'screens/landing_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
@@ -8,9 +9,17 @@ import 'screens/collections_screen.dart';
 import 'screens/monitoring_screen.dart';
 import 'screens/governance_screen.dart';
 import 'screens/settings_screen.dart';
+import 'providers/auth_provider.dart';
 
 void main() {
-  runApp(const TracelyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
+      child: const TracelyApp(),
+    ),
+  );
 }
 
 class TracelyApp extends StatelessWidget {
@@ -75,6 +84,7 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
       body: Stack(
         children: [
           _screens[_currentScreen],
+          // Development navigation bar
           Positioned(
             bottom: 0,
             left: 0,
@@ -91,53 +101,58 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'WIREFRAME NAVIGATION:',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  ...List.generate(_screenNames.length, (index) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _currentScreen = index;
-                          });
-                        },
-                        style: TextButton.styleFrom(
-                          backgroundColor: _currentScreen == index
-                              ? Colors.white
-                              : Colors.transparent,
-                          foregroundColor: _currentScreen == index
-                              ? Colors.grey.shade900
-                              : Colors.grey.shade400,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        child: Text(
-                          _screenNames[index],
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, right: 8),
+                      child: Text(
+                        'WIREFRAME NAV:',
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.2,
                         ),
                       ),
-                    );
-                  }),
-                ],
+                    ),
+                    ...List.generate(_screenNames.length, (index) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _currentScreen = index;
+                            });
+                          },
+                          style: TextButton.styleFrom(
+                            backgroundColor: _currentScreen == index
+                                ? Colors.white
+                                : Colors.transparent,
+                            foregroundColor: _currentScreen == index
+                                ? Colors.grey.shade900
+                                : Colors.grey.shade400,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: Text(
+                            _screenNames[index],
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(width: 16),
+                  ],
+                ),
               ),
             ),
           ),
