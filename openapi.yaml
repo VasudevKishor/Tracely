@@ -1,0 +1,853 @@
+openapi: 3.0.0
+info:
+  title: Tracely API
+  description: Unified API Debugging, Distributed Tracing and Scenario Automation Platform
+  version: 1.0.0
+  contact:
+    name: Development Team
+
+servers:
+  - url: http://localhost:8080
+    description: Development Server
+  - url: https://api.tracely.com
+    description: Production Server
+
+paths:
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user_id:
+                    type: string
+                  email:
+                    type: string
+                  name:
+                    type: string
+        '401':
+          description: Invalid credentials
+
+  /api/v1/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: User registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                name:
+                  type: string
+              required:
+                - email
+                - password
+                - name
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user_id:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: Email already exists
+
+  /api/v1/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+
+  /api/v1/workspaces:
+    get:
+      tags:
+        - Workspaces
+      summary: Get all workspaces
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of workspaces
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workspaces:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workspace'
+
+    post:
+      tags:
+        - Workspaces
+      summary: Create workspace
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+              required:
+                - name
+      responses:
+        '201':
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+
+  /api/v1/workspaces/{workspace_id}:
+    get:
+      tags:
+        - Workspaces
+      summary: Get workspace details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Workspace details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+
+    put:
+      tags:
+        - Workspaces
+      summary: Update workspace
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Workspace updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+
+    delete:
+      tags:
+        - Workspaces
+      summary: Delete workspace
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Workspace deleted
+
+  /api/v1/workspaces/{workspace_id}/collections:
+    get:
+      tags:
+        - Collections
+      summary: Get all collections
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of collections
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  collections:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Collection'
+
+    post:
+      tags:
+        - Collections
+      summary: Create collection
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+              required:
+                - name
+      responses:
+        '201':
+          description: Collection created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+
+  /api/v1/workspaces/{workspace_id}/collections/{collection_id}:
+    get:
+      tags:
+        - Collections
+      summary: Get collection details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Collection details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+
+  /api/v1/workspaces/{workspace_id}/collections/{collection_id}/requests:
+    post:
+      tags:
+        - Requests
+      summary: Create API request
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPayload'
+      responses:
+        '201':
+          description: Request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+
+  /api/v1/workspaces/{workspace_id}/requests/{request_id}/execute:
+    post:
+      tags:
+        - Requests
+      summary: Execute API request
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                override_url:
+                  type: string
+                override_headers:
+                  type: object
+                trace_id:
+                  type: string
+      responses:
+        '200':
+          description: Request executed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionResponse'
+
+  /api/v1/workspaces/{workspace_id}/requests/{request_id}/history:
+    get:
+      tags:
+        - Requests
+      summary: Get request execution history
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Request history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  executions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Execution'
+                  total:
+                    type: integer
+
+  /api/v1/workspaces/{workspace_id}/traces:
+    get:
+      tags:
+        - Tracing
+      summary: Get traces
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: service_name
+          in: query
+          schema:
+            type: string
+        - name: start_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of traces
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  traces:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Trace'
+                  total:
+                    type: integer
+
+  /api/v1/workspaces/{workspace_id}/traces/{trace_id}:
+    get:
+      tags:
+        - Tracing
+      summary: Get trace details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: trace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trace details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceDetail'
+
+  /api/v1/workspaces/{workspace_id}/monitoring/dashboard:
+    get:
+      tags:
+        - Monitoring
+      summary: Get monitoring dashboard
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: time_range
+          in: query
+          schema:
+            type: string
+            enum: [last_hour, last_24h, last_7d, last_30d]
+            default: last_hour
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+
+  /api/v1/workspaces/{workspace_id}/governance/policies:
+    get:
+      tags:
+        - Governance
+      summary: Get governance policies
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of policies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Policy'
+
+  /api/v1/users/settings:
+    get:
+      tags:
+        - Settings
+      summary: Get user settings
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettings'
+
+    put:
+      tags:
+        - Settings
+      summary: Update user settings
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSettings'
+      responses:
+        '200':
+          description: Settings updated
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        owner_id:
+          type: string
+          format: uuid
+        members:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Collection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        workspace_id:
+          type: string
+          format: uuid
+        request_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    Request:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        method:
+          type: string
+          enum: [GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS]
+        url:
+          type: string
+          format: uri
+        headers:
+          type: object
+        query_params:
+          type: object
+        body:
+          type: object
+        collection_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    RequestPayload:
+      type: object
+      properties:
+        name:
+          type: string
+        method:
+          type: string
+          enum: [GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS]
+        url:
+          type: string
+          format: uri
+        headers:
+          type: object
+        query_params:
+          type: object
+        body:
+          type: object
+        description:
+          type: string
+      required:
+        - name
+        - method
+        - url
+
+    Execution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status_code:
+          type: integer
+        response_time_ms:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        trace_id:
+          type: string
+          format: uuid
+
+    ExecutionResponse:
+      type: object
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        status_code:
+          type: integer
+        response_time_ms:
+          type: integer
+        response_body:
+          type: object
+        response_headers:
+          type: object
+        trace_id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+
+    Trace:
+      type: object
+      properties:
+        trace_id:
+          type: string
+          format: uuid
+        service_name:
+          type: string
+        span_count:
+          type: integer
+        total_duration_ms:
+          type: number
+        start_time:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [success, error, timeout]
+
+    TraceDetail:
+      type: object
+      properties:
+        trace_id:
+          type: string
+          format: uuid
+        spans:
+          type: array
+          items:
+            $ref: '#/components/schemas/Span'
+
+    Span:
+      type: object
+      properties:
+        span_id:
+          type: string
+          format: uuid
+        parent_span_id:
+          type: string
+          format: uuid
+        operation_name:
+          type: string
+        service_name:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        duration_ms:
+          type: number
+        tags:
+          type: object
+        logs:
+          type: array
+          items:
+            type: object
+
+    Dashboard:
+      type: object
+      properties:
+        total_requests:
+          type: integer
+        successful_requests:
+          type: integer
+        failed_requests:
+          type: integer
+        avg_response_time_ms:
+          type: number
+        p95_response_time_ms:
+          type: number
+        p99_response_time_ms:
+          type: number
+        error_rate:
+          type: number
+        top_endpoints:
+          type: array
+          items:
+            type: object
+        services:
+          type: array
+          items:
+            type: object
+
+    Policy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        enabled:
+          type: boolean
+        rules:
+          type: array
+          items:
+            type: object
+
+    UserSettings:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark]
+        notifications_enabled:
+          type: boolean
+        email_notifications:
+          type: boolean
+        language:
+          type: string
+        timezone:
+          type: string
+        preferences:
+          type: object
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints
+  - name: Workspaces
+    description: Workspace management
+  - name: Collections
+    description: API collection management
+  - name: Requests
+    description: API request management and execution
+  - name: Tracing
+    description: Distributed tracing
+  - name: Monitoring
+    description: Monitoring and dashboards
+  - name: Governance
+    description: Governance and policies
+  - name: Settings
+    description: User settings
