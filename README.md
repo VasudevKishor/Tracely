@@ -6,17 +6,6 @@
 **Date:** 2025-12-09
 
 ---
-
-### Maintainer & Contact Information
-| Field | Details |
-| :--- | :--- |
-| **Maintainer** | Vasudev Kishor |
-| **Roll Number** | `CB.SC.U4CSE23151` |
-| **Official Email** | [cb.sc.u4cse23151@cb.students.amrita.edu](mailto:cb.sc.u4cse23151@cb.students.amrita.edu) |
-| **Personal Email** | [vasudevkishor@gmail.com](mailto:vasudevkishor@gmail.com) |
-
----
-
 ## 1. Introduction
 
 ### 1.1 Purpose
