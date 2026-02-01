@@ -3,27 +3,30 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Change this based on your platform:
-  // Web: 'http://localhost:8080/api/v1'
-  // Android Emulator: 'http://10.0.2.2:8080/api/v1'
-  // iOS Simulator: 'http://localhost:8080/api/v1'
-  // Physical Device: 'http://YOUR_IP:8080/api/v1'
   static const String baseUrl = 'http://localhost:8081/api/v1';
+  // For Android emulator: 'http://10.0.2.2:8081/api/v1'
+  // For iOS simulator: 'http://localhost:8081/api/v1'
+  // For real device: 'http://YOUR_IP:8081/api/v1'
   
   String? _accessToken;
   String? _refreshToken;
   
-  // Singleton
+  // Singleton pattern
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
   
+  // Check if user is authenticated
+  bool get isAuthenticated => _accessToken != null && _accessToken!.isNotEmpty;
+  
+  // Load tokens from storage
   Future<void> loadTokens() async {
     final prefs = await SharedPreferences.getInstance();
     _accessToken = prefs.getString('access_token');
     _refreshToken = prefs.getString('refresh_token');
   }
   
+  // Save tokens to storage
   Future<void> saveTokens(String accessToken, String refreshToken) async {
     _accessToken = accessToken;
     _refreshToken = refreshToken;
@@ -32,6 +35,7 @@ class ApiService {
     await prefs.setString('refresh_token', refreshToken);
   }
   
+  // Clear tokens
   Future<void> clearTokens() async {
     _accessToken = null;
     _refreshToken = null;
@@ -40,16 +44,20 @@ class ApiService {
     await prefs.remove('refresh_token');
   }
   
-  bool get isAuthenticated => _accessToken != null;
-  
+  // Get headers with optional auth
   Future<Map<String, String>> _getHeaders({bool includeAuth = true}) async {
-    final headers = {'Content-Type': 'application/json'};
+    final headers = {
+      'Content-Type': 'application/json',
+    };
+    
     if (includeAuth && _accessToken != null) {
       headers['Authorization'] = 'Bearer $_accessToken';
     }
+    
     return headers;
   }
   
+  // Generic request handler
   Future<Map<String, dynamic>> _handleResponse(http.Response response) async {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isNotEmpty) {
@@ -69,12 +77,16 @@ class ApiService {
     }
   }
   
-  // AUTH ENDPOINTS
+  // ==================== AUTH ENDPOINTS ====================
+  
   Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: await _getHeaders(includeAuth: false),
-      body: json.encode({'email': email, 'password': password}),
+      body: json.encode({
+        'email': email,
+        'password': password,
+      }),
     );
     
     final data = await _handleResponse(response);
@@ -88,8 +100,13 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/register'),
       headers: await _getHeaders(includeAuth: false),
-      body: json.encode({'email': email, 'password': password, 'name': name}),
+      body: json.encode({
+        'email': email,
+        'password': password,
+        'name': name,
+      }),
     );
+    
     return await _handleResponse(response);
   }
   
@@ -104,49 +121,108 @@ class ApiService {
     }
   }
   
-  // WORKSPACE ENDPOINTS
+  // ==================== WORKSPACE ENDPOINTS ====================
+  
   Future<List<dynamic>> getWorkspaces() async {
     final response = await http.get(
       Uri.parse('$baseUrl/workspaces'),
       headers: await _getHeaders(),
     );
+  
     final data = await _handleResponse(response);
     return data['workspaces'] ?? data['data'] ?? [];
   }
-  
+
   Future<Map<String, dynamic>> createWorkspace(String name, {String? description}) async {
     final response = await http.post(
       Uri.parse('$baseUrl/workspaces'),
       headers: await _getHeaders(),
-      body: json.encode({'name': name, if (description != null) 'description': description}),
+      body: json.encode({
+        'name': name,
+        if (description != null) 'description': description,
+      }),
     );
+  
     return await _handleResponse(response);
   }
+
+  Future<Map<String, dynamic>> updateWorkspace(
+    String workspaceId,
+    String name,
+    {String? description}
+  ) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/workspaces/$workspaceId'),
+      headers: await _getHeaders(),
+      body: json.encode({
+        'name': name,
+        if (description != null) 'description': description,
+      }),
+    );
   
-  Future<Map<String, dynamic>> getWorkspace(String workspaceId) async {
-    final response = await http.get(
+    return await _handleResponse(response);
+  }
+
+  Future<void> deleteWorkspace(String workspaceId) async {
+    final response = await http.delete(
       Uri.parse('$baseUrl/workspaces/$workspaceId'),
       headers: await _getHeaders(),
     );
-    return await _handleResponse(response);
+  
+    await _handleResponse(response);
   }
   
-  // COLLECTION ENDPOINTS
+  // ==================== COLLECTION ENDPOINTS ====================
+  
   Future<List<dynamic>> getCollections(String workspaceId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/workspaces/$workspaceId/collections'),
       headers: await _getHeaders(),
     );
+    
     final data = await _handleResponse(response);
     return data['collections'] ?? data['data'] ?? [];
   }
   
-  // MONITORING ENDPOINTS
+  Future<Map<String, dynamic>> createCollection(
+    String workspaceId, 
+    String name, 
+    {String? description}
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/collections'),
+      headers: await _getHeaders(),
+      body: json.encode({
+        'name': name,
+        if (description != null) 'description': description,
+      }),
+    );
+    
+    return await _handleResponse(response);
+  }
+  
+  // ==================== REQUEST ENDPOINTS ====================
+  
+  Future<Map<String, dynamic>> executeRequest(
+    String workspaceId, 
+    String requestId
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/requests/$requestId/execute'),
+      headers: await _getHeaders(),
+    );
+    
+    return await _handleResponse(response);
+  }
+  
+  // ==================== MONITORING ENDPOINTS ====================
+  
   Future<Map<String, dynamic>> getDashboard(String workspaceId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/workspaces/$workspaceId/monitoring/dashboard'),
       headers: await _getHeaders(),
     );
+    
     return await _handleResponse(response);
   }
   
@@ -155,15 +231,68 @@ class ApiService {
       Uri.parse('$baseUrl/workspaces/$workspaceId/monitoring/metrics'),
       headers: await _getHeaders(),
     );
+    
     return await _handleResponse(response);
   }
   
-  // SETTINGS ENDPOINTS
+  // ==================== GOVERNANCE ENDPOINTS ====================
+  
+  Future<List<dynamic>> getGovernancePolicies(String workspaceId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/governance/policies'),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    return data['policies'] ?? data['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> createGovernancePolicy(
+    String workspaceId,
+    String name,
+    String description,
+    String type,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/governance/policies'),
+      headers: await _getHeaders(),
+      body: json.encode({
+        'name': name,
+        'description': description,
+        'type': type,
+      }),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> updateGovernancePolicy(
+    String workspaceId,
+    String policyId,
+    Map<String, dynamic> updates,
+  ) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/governance/policies/$policyId'),
+      headers: await _getHeaders(),
+      body: json.encode(updates),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<void> deleteGovernancePolicy(String workspaceId, String policyId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/governance/policies/$policyId'),
+      headers: await _getHeaders(),
+    );
+    await _handleResponse(response);
+  }
+  
+  // ==================== SETTINGS ENDPOINTS ====================
+  
   Future<Map<String, dynamic>> getSettings() async {
     final response = await http.get(
       Uri.parse('$baseUrl/users/settings'),
       headers: await _getHeaders(),
     );
+    
     return await _handleResponse(response);
   }
   
@@ -173,6 +302,7 @@ class ApiService {
       headers: await _getHeaders(),
       body: json.encode(settings),
     );
+    
     return await _handleResponse(response);
   }
 }

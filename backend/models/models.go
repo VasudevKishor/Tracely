@@ -99,6 +99,7 @@ type Trace struct {
 	StartTime       time.Time      `gorm:"not null" json:"start_time"`
 	EndTime         time.Time      `json:"end_time"`
 	Status          string         `gorm:"not null;default:'success'" json:"status"` // success, error, timeout
+	Spans           []Span         `gorm:"foreignKey:TraceID" json:"spans"`
 	CreatedAt       time.Time      `json:"created_at"`
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
 }

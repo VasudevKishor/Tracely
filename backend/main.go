@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -123,7 +124,14 @@ func setupRouter(cfg *config.Config, authService *services.AuthService,
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Trace-ID"},
 		ExposeHeaders:    []string{"Content-Length", "X-Trace-ID"},
 		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
+		AllowOriginFunc: func(origin string) bool {
+			// allow any localhost port dynamically
+			return origin == "http://localhost" ||
+				origin == "http://127.0.0.1" ||
+				strings.HasPrefix(origin, "http://localhost:") ||
+				strings.HasPrefix(origin, "http://127.0.0.1:")
+		},
+		MaxAge: 12 * time.Hour,
 	}
 	router.Use(cors.New(corsConfig))
 

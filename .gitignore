@@ -40,3 +40,13 @@ coverage/
 # Temporary
 tmp/
 temp/
+.aider*
+
+
+#readme
+FINAL_DELIVERY_SUMMARY.md
+FRONTEND_BACKEND_ANALYSIS.md
+INTEGRATION_GUIDE.md
+backend/COMPLETE.md
+backend/NEW_FEATURES.md
+backend/QUICK_START.md

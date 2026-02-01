@@ -25,16 +25,16 @@ services:
     container_name: tracely-backend
     environment:
       - ENVIRONMENT=development
-      - PORT=8080
+      - PORT=8081
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/tracely_dev?sslmode=disable
       - JWT_SECRET=your-secret-key-change-in-production
       - JWT_EXPIRATION=1h
       - REFRESH_EXPIRATION=720h
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:8000,http://localhost:8001
+      - CORS_ORIGINS=http://localhost:,http://localhost:3000,http://localhost:8000,http://localhost:8001
       - LOG_LEVEL=info
       - TRACE_STORAGE_DIR=/app/traces
     ports:
-      - "8080:8080"
+      - "8081:8081"
     depends_on:
       postgres:
         condition: service_healthy

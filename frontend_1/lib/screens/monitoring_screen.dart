@@ -1,176 +1,192 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/workspace_provider.dart';
+import '../services/api_service.dart';
 
-class MonitoringScreen extends StatelessWidget {
+class MonitoringScreen extends StatefulWidget {
   const MonitoringScreen({Key? key}) : super(key: key);
 
   @override
+  State<MonitoringScreen> createState() => _MonitoringScreenState();
+}
+
+class _MonitoringScreenState extends State<MonitoringScreen> {
+  final _apiService = ApiService();
+  Map<String, dynamic>? _monitoringData;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMonitoringData();
+    });
+  }
+
+  Future<void> _loadMonitoringData() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final workspaceProvider = Provider.of<WorkspaceProvider>(context, listen: false);
+    
+    if (!authProvider.isAuthenticated) return;
+
+    if (workspaceProvider.workspaces.isEmpty) {
+      await workspaceProvider.loadWorkspaces();
+    }
+
+    if (workspaceProvider.selectedWorkspaceId != null) {
+      setState(() => _isLoading = true);
+      try {
+        final data = await _apiService.getMetrics(workspaceProvider.selectedWorkspaceId!);
+        setState(() => _monitoringData = data);
+      } catch (e) {
+        // Use mock data if API fails
+        setState(() {
+          _monitoringData = {
+            'uptime': 99.97,
+            'latency': 142,
+          };
+        });
+      } finally {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFFFAFAFA),
-      child: Column(
-        children: [
-          _buildTopBar(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Monitoring Center',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.grey.shade900,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade900,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
+    return Consumer2<AuthProvider, WorkspaceProvider>(
+      builder: (context, authProvider, workspaceProvider, child) {
+        if (!authProvider.isAuthenticated) {
+          return _buildUnauthenticatedView();
+        }
+
+        if (workspaceProvider.selectedWorkspaceId == null) {
+          return _buildNoWorkspaceView();
+        }
+
+        return Container(
+          color: const Color(0xFFFAFAFA),
+          child: Column(
+            children: [
+              _buildTopBar(authProvider),
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.add, color: Colors.white, size: 18),
-                            SizedBox(width: 8),
-                            Text(
-                              'Create Monitor',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  'Monitoring Center',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.grey.shade900,
+                                  ),
+                                ),
+                                const Spacer(),
+                                InkWell(
+                                  onTap: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Create monitor coming soon')),
+                                    );
+                                  },
+                                  child: Container(
+                                    height: 40,
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade900,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.add, color: Colors.white, size: 18),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Create Monitor',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
+                            const SizedBox(height: 32),
+
+                            Row(
+                              children: [
+                                Expanded(child: _buildUptimeChart()),
+                                const SizedBox(width: 20),
+                                Expanded(child: _buildLatencyChart()),
+                              ],
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            _buildActiveMonitorsSection(),
+
+                            const SizedBox(height: 24),
+
+                            _buildIncidentHistorySection(),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Uptime & Latency Charts
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildUptimeChart(),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: _buildLatencyChart(),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Active Monitors
-                  Container(
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Active Monitors',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade900,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        _buildMonitorCard(
-                          'Payment API Health Check',
-                          'Every 5 minutes',
-                          '99.98%',
-                          'Healthy',
-                          Colors.green,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildMonitorCard(
-                          'User Service Endpoint',
-                          'Every 10 minutes',
-                          '99.95%',
-                          'Healthy',
-                          Colors.green,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildMonitorCard(
-                          'Analytics API',
-                          'Every 15 minutes',
-                          '98.20%',
-                          'Warning',
-                          Colors.orange,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Incident History
-                  Container(
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Incident History',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade900,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        _buildIncidentItem(
-                          'High latency detected',
-                          'Analytics API',
-                          '2 hours ago',
-                          'Resolved',
-                          Colors.green,
-                        ),
-                        _buildIncidentItem(
-                          'Service timeout',
-                          'Payment API',
-                          '1 day ago',
-                          'Resolved',
-                          Colors.green,
-                        ),
-                        _buildIncidentItem(
-                          'Rate limit exceeded',
-                          'User Service',
-                          '3 days ago',
-                          'Resolved',
-                          Colors.green,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ),
-            ),
+            ],
           ),
-        ],
+        );
+      },
+    );
+  }
+
+  Widget _buildUnauthenticatedView() {
+    return Container(
+      color: const Color(0xFFFAFAFA),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock_outline, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Please login to view monitoring',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildNoWorkspaceView() {
+    return Container(
+      color: const Color(0xFFFAFAFA),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.folder_off_outlined, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Please select a workspace first',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar(AuthProvider authProvider) {
     return Container(
       height: 70,
       padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -198,10 +214,23 @@ class MonitoringScreen extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.logout, size: 20),
+            onPressed: () async {
+              await authProvider.logout();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Logged out')),
+              );
+            },
+            tooltip: 'Logout',
+          ),
           CircleAvatar(
             radius: 18,
             backgroundColor: Colors.grey.shade900,
-            child: const Icon(Icons.person, color: Colors.white, size: 18),
+            child: Text(
+              authProvider.user?['name']?[0]?.toUpperCase() ?? 'U',
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -209,6 +238,8 @@ class MonitoringScreen extends StatelessWidget {
   }
 
   Widget _buildUptimeChart() {
+    final uptime = _monitoringData?['uptime'] ?? 99.97;
+    
     return Container(
       height: 300,
       padding: const EdgeInsets.all(24),
@@ -240,7 +271,7 @@ class MonitoringScreen extends StatelessWidget {
           Row(
             children: [
               Text(
-                '99.97%',
+                '$uptime%',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.w700,
@@ -290,6 +321,8 @@ class MonitoringScreen extends StatelessWidget {
   }
 
   Widget _buildLatencyChart() {
+    final latency = _monitoringData?['latency'] ?? 142;
+    
     return Container(
       height: 300,
       padding: const EdgeInsets.all(24),
@@ -321,7 +354,7 @@ class MonitoringScreen extends StatelessWidget {
           Row(
             children: [
               Text(
-                '142ms',
+                '${latency}ms',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.w700,
@@ -374,6 +407,54 @@ class MonitoringScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.blue.shade400,
         borderRadius: BorderRadius.circular(4),
+      ),
+    );
+  }
+
+  Widget _buildActiveMonitorsSection() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Active Monitors',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade900,
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildMonitorCard(
+            'Payment API Health Check',
+            'Every 5 minutes',
+            '99.98%',
+            'Healthy',
+            Colors.green,
+          ),
+          const SizedBox(height: 16),
+          _buildMonitorCard(
+            'User Service Endpoint',
+            'Every 10 minutes',
+            '99.95%',
+            'Healthy',
+            Colors.green,
+          ),
+          const SizedBox(height: 16),
+          _buildMonitorCard(
+            'Analytics API',
+            'Every 15 minutes',
+            '98.20%',
+            'Warning',
+            Colors.orange,
+          ),
+        ],
       ),
     );
   }
@@ -445,11 +526,57 @@ class MonitoringScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: (statusColor is MaterialColor) ? statusColor.shade700 : statusColor,
+                    color: statusColor is MaterialColor ? statusColor.shade700 : statusColor,
                   ),
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIncidentHistorySection() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Incident History',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade900,
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildIncidentItem(
+            'High latency detected',
+            'Analytics API',
+            '2 hours ago',
+            'Resolved',
+            Colors.green,
+          ),
+          _buildIncidentItem(
+            'Service timeout',
+            'Payment API',
+            '1 day ago',
+            'Resolved',
+            Colors.green,
+          ),
+          _buildIncidentItem(
+            'Rate limit exceeded',
+            'User Service',
+            '3 days ago',
+            'Resolved',
+            Colors.green,
           ),
         ],
       ),
@@ -514,7 +641,7 @@ class MonitoringScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: (color is MaterialColor) ? color.shade700 : color,
+                    color: color is MaterialColor ? color.shade700 : color,
                   ),
                 ),
               ),

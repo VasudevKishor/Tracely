@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/api_services.dart';
+import '../services/api_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -32,7 +32,12 @@ class AuthProvider with ChangeNotifier {
     try {
       _errorMessage = null;
       final data = await _apiService.login(email, password);
-      _user = data['user'];
+      _user = {
+      'id': data['user_id'],
+      'name': data['name'],
+      'email': data['email'],
+      'token': data['token'], // <-- add token here
+    };
       _isAuthenticated = true;
       notifyListeners();
       return true;

@@ -7,7 +7,7 @@ info:
     name: Development Team
 
 servers:
-  - url: http://localhost:8080
+  - url: http://localhost:8081
     description: Development Server
   - url: https://api.tracely.com
     description: Production Server

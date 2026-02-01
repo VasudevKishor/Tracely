@@ -186,7 +186,7 @@ The frontend has these screens, each requiring backend support:
 ### With Frontend
 1. Start Go backend: `go run main.go`
 2. Open frontend web build: `http://localhost:8000`
-3. Backend should be at: `http://localhost:8080`
+3. Backend should be at: `http://localhost:8081`
 
 ### With Swagger/Postman
 1. Import `openapi.yaml` into Swagger UI or Postman
@@ -220,7 +220,7 @@ npx @openapitools/openapi-generator-cli generate -i openapi.yaml -g go -o ./gene
 
 The frontend expects the backend at:
 ```
-http://localhost:8080  (Development)
+http://localhost:8081  (Development)
 https://api.tracely.com (Production)
 ```
 

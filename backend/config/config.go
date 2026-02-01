@@ -9,16 +9,16 @@ import (
 )
 
 type Config struct {
-	Environment     string
-	Port            string
-	DatabaseURL     string
-	JWTSecret       string
-	JWTExpiration   string
+	Environment       string
+	Port              string
+	DatabaseURL       string
+	JWTSecret         string
+	JWTExpiration     string
 	RefreshExpiration string
-	CORSOrigins     []string
-	LogLevel        string
-	TraceStorageDir string
-	MaxReplayWorkers int
+	CORSOrigins       []string
+	LogLevel          string
+	TraceStorageDir   string
+	MaxReplayWorkers  int
 }
 
 func Load() *Config {
@@ -27,12 +27,12 @@ func Load() *Config {
 
 	config := &Config{
 		Environment:       getEnv("ENVIRONMENT", "development"),
-		Port:              getEnv("PORT", "8080"),
+		Port:              getEnv("PORT", "8081"),
 		DatabaseURL:       getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/tracely_dev?sslmode=disable"),
 		JWTSecret:         getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 		JWTExpiration:     getEnv("JWT_EXPIRATION", "1h"),
 		RefreshExpiration: getEnv("REFRESH_EXPIRATION", "720h"), // 30 days
-		CORSOrigins:       strings.Split(getEnv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8000,http://localhost:8001"), ","),
+		CORSOrigins:       strings.Split(getEnv("CORS_ORIGINS", "http://localhost"), ","),
 		LogLevel:          getEnv("LOG_LEVEL", "info"),
 		TraceStorageDir:   getEnv("TRACE_STORAGE_DIR", "./traces"),
 		MaxReplayWorkers:  10,

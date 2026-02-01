@@ -10,12 +10,21 @@ import 'screens/monitoring_screen.dart';
 import 'screens/governance_screen.dart';
 import 'screens/settings_screen.dart';
 import 'providers/auth_provider.dart';
+import 'providers/workspace_provider.dart';
+import 'providers/collection_provider.dart';
+import 'providers/governance_provider.dart';
+import 'package:http/http.dart' as http;
+import 'providers/dashboard_provider.dart';
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => WorkspaceProvider()),
+        ChangeNotifierProvider(create: (_) => CollectionProvider()),
+        ChangeNotifierProvider(create: (_) => GovernanceProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
       ],
       child: const TracelyApp(),
     ),
@@ -84,6 +93,62 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
       body: Stack(
         children: [
           _screens[_currentScreen],
+
+          // Add this Floating button at bottom right for backend test
+    Positioned(
+      bottom: 80,
+      right: 16,
+      child:  FloatingActionButton(
+  backgroundColor: Colors.green,
+  child: const Icon(Icons.cloud_done),
+  tooltip: 'Check Backend',
+  onPressed: () async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    if (!authProvider.isAuthenticated || authProvider.user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ You need to login first')),
+      );
+      return;
+    }
+
+    try {
+      final token = authProvider.user!['token']; // get JWT
+
+      final response = await http.get(
+        Uri.parse('http://localhost:8081/api/v1/workspaces'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      String message;
+      if (response.statusCode == 200) {
+        message = '✅ Backend is reachable!';
+      } else if (response.statusCode == 401) {
+        message = '⚠️ Unauthorized. Please login again.';
+      } else {
+        message = '⚠️ Backend returned status: ${response.statusCode}';
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Error connecting: $e')),
+        );
+      }
+    }
+  },
+)
+
+    ),
+
           // Development navigation bar
           Positioned(
             bottom: 0,

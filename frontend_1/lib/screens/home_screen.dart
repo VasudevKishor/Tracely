@@ -1,189 +1,295 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/workspace_provider.dart';
+import '../providers/dashboard_provider.dart';
 
-
-
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDashboard();
+    });
+  }
+
+  void _loadDashboard() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final workspaceProvider = Provider.of<WorkspaceProvider>(context, listen: false);
+    
+    if (!authProvider.isAuthenticated) return;
+
+    if (workspaceProvider.workspaces.isEmpty) {
+      workspaceProvider.loadWorkspaces().then((_) {
+        if (workspaceProvider.selectedWorkspaceId != null) {
+          Provider.of<DashboardProvider>(context, listen: false)
+              .loadDashboard(workspaceProvider.selectedWorkspaceId!);
+        }
+      });
+    } else if (workspaceProvider.selectedWorkspaceId != null) {
+      Provider.of<DashboardProvider>(context, listen: false)
+          .loadDashboard(workspaceProvider.selectedWorkspaceId!);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return Consumer3<DashboardProvider, WorkspaceProvider, AuthProvider>(
+      builder: (context, dashboardProvider, workspaceProvider, authProvider, child) {
+        if (!authProvider.isAuthenticated) {
+          return _buildUnauthenticatedView();
+        }
+
+        if (workspaceProvider.selectedWorkspaceId == null) {
+          return _buildNoWorkspaceView();
+        }
+
+        return Container(
+          color: const Color(0xFFFAFAFA),
+          child: Column(
+            children: [
+              _buildTopBar(authProvider, workspaceProvider),
+              Expanded(
+                child: dashboardProvider.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Dashboard',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.grey.shade900,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Monitor your API health and team activity',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+
+                            // Top Row - Metrics
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    'API Uptime',
+                                    '${dashboardProvider.uptime}%',
+                                    Icons.check_circle_outline,
+                                    Colors.green.shade400,
+                                    '+0.03% vs last week',
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    'Error Rate',
+                                    '${dashboardProvider.errorRate}%',
+                                    Icons.error_outline,
+                                    Colors.orange.shade400,
+                                    '-0.05% vs last week',
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    'Avg Latency',
+                                    '${dashboardProvider.avgLatency}ms',
+                                    Icons.speed,
+                                    Colors.blue.shade400,
+                                    '+12ms vs last week',
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    'Total Requests',
+                                    dashboardProvider.totalRequests,
+                                    Icons.trending_up,
+                                    Colors.purple.shade400,
+                                    '+320K this week',
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Charts Row
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: _buildChartCard(
+                                    'Request Volume',
+                                    'Last 7 days',
+                                    350,
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: _buildRecentActivityCard(),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Bottom Row
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: _buildFavoriteCollectionsCard(),
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: _buildErrorAlertsCard(),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildUnauthenticatedView() {
     return Container(
       color: const Color(0xFFFAFAFA),
-      child: Column(
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock_outline, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Please login to view dashboard',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoWorkspaceView() {
+    return Container(
+      color: const Color(0xFFFAFAFA),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.folder_off_outlined, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Please select a workspace first',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Go to Workspaces screen to select or create one',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar(AuthProvider authProvider, WorkspaceProvider workspaceProvider) {
+    return Container(
+      height: 70,
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Row(
         children: [
-          // Top Navigation Bar
+          Text(
+            'Tracely',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey.shade900,
+            ),
+          ),
+          const SizedBox(width: 60),
+          _buildTopNavItem('Dashboard', true),
+          _buildTopNavItem('Workspaces', false),
+          _buildTopNavItem('Collections', false),
+          _buildTopNavItem('Monitors', false),
+          const Spacer(),
           Container(
-            height: 70,
-            padding: const EdgeInsets.symmetric(horizontal: 40),
+            width: 300,
+            height: 40,
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               children: [
-                Text(
-                  'Tracely',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.grey.shade900,
-                  ),
-                ),
-                const SizedBox(width: 60),
-                _buildTopNavItem('Dashboard', true),
-                _buildTopNavItem('Workspaces', false),
-                _buildTopNavItem('Collections', false),
-                _buildTopNavItem('Monitors', false),
-                const Spacer(),
-                Container(
-                  width: 300,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 16),
-                      Icon(Icons.search, size: 18, color: Colors.grey.shade500),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Search APIs, requests, monitors...',
-                            hintStyle: TextStyle(
-                              color: Colors.grey.shade400,
-                              fontSize: 13,
-                            ),
-                            border: InputBorder.none,
-                          ),
-                        ),
+                const SizedBox(width: 16),
+                Icon(Icons.search, size: 18, color: Colors.grey.shade500),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search APIs, requests, monitors...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 13,
                       ),
-                    ],
+                      border: InputBorder.none,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 20),
-                _buildQuickActionButton(Icons.add, 'New Request'),
-                const SizedBox(width: 12),
-                _buildQuickActionButton(Icons.notifications_outlined, null),
-                const SizedBox(width: 12),
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Colors.grey.shade900,
-                  child: const Icon(Icons.person, color: Colors.white, size: 18),
                 ),
               ],
             ),
           ),
-
-          // Dashboard Canvas
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Dashboard',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade900,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Monitor your API health and team activity',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Top Row - Metrics
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildMetricCard(
-                          'API Uptime',
-                          '99.97%',
-                          Icons.check_circle_outline,
-                          Colors.green.shade400,
-                          '+0.03% vs last week',
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: _buildMetricCard(
-                          'Error Rate',
-                          '0.12%',
-                          Icons.error_outline,
-                          Colors.orange.shade400,
-                          '-0.05% vs last week',
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: _buildMetricCard(
-                          'Avg Latency',
-                          '142ms',
-                          Icons.speed,
-                          Colors.blue.shade400,
-                          '+12ms vs last week',
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: _buildMetricCard(
-                          'Total Requests',
-                          '2.4M',
-                          Icons.trending_up,
-                          Colors.purple.shade400,
-                          '+320K this week',
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Charts Row
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: _buildChartCard(
-                          'Request Volume',
-                          'Last 7 days',
-                          350,
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: _buildRecentActivityCard(),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Bottom Row
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _buildFavoriteCollectionsCard(),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: _buildErrorAlertsCard(),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+          const SizedBox(width: 20),
+          _buildQuickActionButton(Icons.add, 'New Request'),
+          const SizedBox(width: 12),
+          _buildQuickActionButton(Icons.notifications_outlined, null),
+          const SizedBox(width: 12),
+          if (authProvider.isAuthenticated)
+            IconButton(
+              icon: const Icon(Icons.logout, size: 20),
+              onPressed: () async {
+                await authProvider.logout();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Logged out')),
+                );
+              },
+              tooltip: 'Logout',
+            ),
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.grey.shade900,
+            child: Text(
+              authProvider.user?['name']?[0]?.toUpperCase() ?? 'U',
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
         ],

@@ -565,7 +565,7 @@ python -m http.server 8000
 
 The frontend expects the Go backend to be running at:
 ```
-http://localhost:8080  (default)
+http://localhost:8081  (default)
 ```
 
 Update the base URL in the frontend configuration file when deploying.
