@@ -1,9 +1,8 @@
 package handlers
 
 import (
+	"backend/services"
 	"net/http"
-	"tracely-backend/middlewares"
-	"tracely-backend/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +26,6 @@ type RegisterRequest struct {
 	Name     string `json:"name" binding:"required"`
 }
 
-// Login - FIXED to match Flutter frontend expectations
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -35,37 +33,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authService.Login(req.Email, req.Password)
+	user, token, err := h.authService.Login(req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Generate access token
-	token, err := h.authService.GenerateToken(user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation failed"})
-		return
-	}
-
-	// Create refresh token
-	refreshToken, err := h.authService.CreateRefreshToken(user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Refresh token creation failed"})
-		return
-	}
-
-	// FIXED RESPONSE FORMAT - Matches Flutter frontend expectations
 	c.JSON(http.StatusOK, gin.H{
-		"access_token":  token,            // ✅ Frontend expects "access_token"
-		"refresh_token": refreshToken,     // ✅ Frontend expects "refresh_token"
-		"user_id":       user.ID.String(), // ✅ Frontend uses this
-		"email":         user.Email,       // ✅ Frontend displays this
-		"name":          user.Name,        // ✅ Frontend displays this
+		"token":   token,
+		"user_id": user.ID,
+		"email":   user.Email,
+		"name":    user.Name,
 	})
 }
 
-// Register - FIXED to auto-login after registration
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -73,45 +54,20 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authService.Register(req.Email, req.Password, req.Name)
+	user, token, err := h.authService.Register(req.Email, req.Password, req.Name)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// FIXED: Generate tokens immediately after registration for auto-login
-	token, err := h.authService.GenerateToken(user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation failed"})
-		return
-	}
-
-	refreshToken, err := h.authService.CreateRefreshToken(user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Refresh token creation failed"})
-		return
-	}
-
-	// FIXED RESPONSE FORMAT - Auto-login after registration
 	c.JSON(http.StatusCreated, gin.H{
-		"message":       "User created successfully",
-		"access_token":  token,        // ✅ Allows immediate login
-		"refresh_token": refreshToken, // ✅ For token refresh
-		"user_id":       user.ID.String(),
-		"email":         user.Email,
-		"name":          user.Name,
+		"token":   token,
+		"user_id": user.ID,
+		"message": "User created successfully",
 	})
 }
 
-// Logout
 func (h *AuthHandler) Logout(c *gin.Context) {
-	userID, _ := middlewares.GetUserID(c)
-
-	if err := h.authService.Logout(userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
@@ -119,7 +75,6 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
-// RefreshToken
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -127,45 +82,20 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	userID, err := h.authService.ValidateRefreshToken(req.RefreshToken)
+	token, err := h.authService.RefreshAccessToken(req.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
-
-	// Generate new access token
-	accessToken, err := h.authService.GenerateToken(userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation failed"})
-		return
-	}
-
-	// Generate new refresh token
-	newRefreshToken, err := h.authService.CreateRefreshToken(userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Refresh token creation failed"})
-		return
-	}
-
-	// Revoke old refresh token
-	h.authService.RevokeRefreshToken(req.RefreshToken)
 
 	c.JSON(http.StatusOK, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": newRefreshToken,
+		"token": token,
 	})
 }
 
-// VerifyToken
 func (h *AuthHandler) VerifyToken(c *gin.Context) {
-	userID, exists := middlewares.GetUserID(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-		return
-	}
-
 	c.JSON(http.StatusOK, gin.H{
-		"valid":   true,
-		"user_id": userID.String(),
+		"message": "Token is valid",
+		"user_id": c.GetString("user_id"),
 	})
 }
