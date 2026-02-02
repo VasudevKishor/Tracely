@@ -40,11 +40,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"token":   token,
-		"user_id": user.ID,
-		"email":   user.Email,
-		"name":    user.Name,
+		"access_token":  token.AccessToken,
+		"refresh_token": token.RefreshToken,
+		"user_id":       user.ID,
+		"email":         user.Email,
+		"name":          user.Name,
 	})
+
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -61,10 +63,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"token":   token,
-		"user_id": user.ID,
-		"message": "User created successfully",
+		"message":       "User created successfully",
+		"access_token":  token.AccessToken,
+		"refresh_token": token.RefreshToken,
+		"user_id":       user.ID,
+		"email":         user.Email,
+		"name":          user.Name,
 	})
+
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
@@ -89,7 +95,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"token": token,
+		"access_token": token,
 	})
 }
 

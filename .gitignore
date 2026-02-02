@@ -50,3 +50,5 @@ INTEGRATION_GUIDE.md
 backend/COMPLETE.md
 backend/NEW_FEATURES.md
 backend/QUICK_START.md
+backend/setup_backend.sh
+backend/test_api.sh

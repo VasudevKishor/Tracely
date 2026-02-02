@@ -13,6 +13,11 @@ import (
 	"gorm.io/gorm"
 )
 
+type TokenPair struct {
+	AccessToken  string
+	RefreshToken string
+}
+
 type AuthService struct {
 	db     *gorm.DB
 	config *config.Config
@@ -31,20 +36,17 @@ func NewAuthService(db *gorm.DB, cfg *config.Config) *AuthService {
 	}
 }
 
-func (s *AuthService) Register(email, password, name string) (*models.User, string, error) {
-	// Check if user already exists
+func (s *AuthService) Register(email, password, name string) (*models.User, *TokenPair, error) {
 	var existingUser models.User
 	if err := s.db.Where("email = ?", email).First(&existingUser).Error; err == nil {
-		return nil, "", errors.New("email already exists")
+		return nil, nil, errors.New("email already exists")
 	}
 
-	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
-	// Create user
 	user := models.User{
 		Email:    email,
 		Password: string(hashedPassword),
@@ -52,70 +54,73 @@ func (s *AuthService) Register(email, password, name string) (*models.User, stri
 	}
 
 	if err := s.db.Create(&user).Error; err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
-	// Generate JWT token
-	token, err := s.GenerateToken(user.ID, user.Email)
+	accessToken, err := s.GenerateToken(user.ID, user.Email)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
-	// Create default workspace for user
+	refreshToken, err := s.GenerateRefreshToken(user.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// default workspace, member, settings (unchanged)
 	workspace := models.Workspace{
 		Name:        "Default Workspace",
 		Description: "Your default workspace",
 		OwnerID:     user.ID,
 	}
-	if err := s.db.Create(&workspace).Error; err != nil {
-		return nil, "", err
-	}
+	s.db.Create(&workspace)
 
-	// Add user as admin member
-	member := models.WorkspaceMember{
+	s.db.Create(&models.WorkspaceMember{
 		WorkspaceID: workspace.ID,
 		UserID:      user.ID,
 		Role:        "admin",
-	}
-	if err := s.db.Create(&member).Error; err != nil {
-		return nil, "", err
-	}
+	})
 
-	// Create default settings
-	settings := models.UserSettings{
+	s.db.Create(&models.UserSettings{
 		UserID: user.ID,
 		Theme:  "light",
-	}
-	if err := s.db.Create(&settings).Error; err != nil {
-		return nil, "", err
-	}
+	})
 
-	return &user, token, nil
+	return &user, &TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
-func (s *AuthService) Login(email, password string) (*models.User, string, error) {
+func (s *AuthService) Login(email, password string) (*models.User, *TokenPair, error) {
 	var user models.User
 	if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
-		return nil, "", errors.New("invalid credentials")
+		return nil, nil, errors.New("invalid credentials")
 	}
 
-	// Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return nil, "", errors.New("invalid credentials")
+		return nil, nil, errors.New("invalid credentials")
 	}
 
-	// Generate JWT token
-	token, err := s.GenerateToken(user.ID, user.Email)
+	accessToken, err := s.GenerateToken(user.ID, user.Email)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
-	return &user, token, nil
+	refreshToken, err := s.GenerateRefreshToken(user.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &user, &TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 func (s *AuthService) GenerateToken(userID uuid.UUID, email string) (string, error) {
 	expirationTime := time.Now().Add(1 * time.Hour)
-	
+
 	claims := &JWTClaims{
 		UserID: userID.String(),
 		Email:  email,
