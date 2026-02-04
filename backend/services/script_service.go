@@ -64,19 +64,22 @@ func (s *ScriptService) Run(script string, ctx map[string]interface{}) (*ScriptR
                     }
                 }()
                 res := fn(goja.FunctionCall{})
-                // truthy check
-                if res != nil && !res.Export() == false { // crude truthy check
-                    // use Export and reflect by fmt
-                    exported := res.Export()
-                    // treat nil, false, 0, "" as falsy
+                // Evaluate returned value truthiness using JS-like rules (crude)
+                exported := res.Export()
+                if exported == nil {
+                    pass = false
+                } else {
                     switch v := exported.(type) {
                     case bool:
                         pass = v
-                    case nil:
-                        pass = false
+                    case float64:
+                        pass = v != 0
+                    case int:
+                        pass = v != 0
+                    case string:
+                        pass = v != ""
                     default:
                         pass = true
-                        _ = v
                     }
                 }
             } else {
