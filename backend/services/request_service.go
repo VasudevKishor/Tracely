@@ -16,12 +16,14 @@ import (
 type RequestService struct {
 	db               *gorm.DB
 	workspaceService *WorkspaceService
+	scriptService    *ScriptService
 }
 
-func NewRequestService(db *gorm.DB) *RequestService {
+func NewRequestService(db *gorm.DB, scriptService *ScriptService) *RequestService {
 	return &RequestService{
 		db:               db,
 		workspaceService: NewWorkspaceService(db),
+		scriptService:    scriptService,
 	}
 }
 
@@ -97,6 +99,29 @@ func (s *RequestService) Execute(requestID, userID uuid.UUID, overrideURL string
 		return nil, err
 	}
 
+	// Run pre-request script if present (non-blocking; errors captured)
+	if request.PreRequestScript != "" && s.scriptService != nil {
+		// Build a simple context for the script
+		var hdrs map[string]string
+		if request.Headers != "" {
+			json.Unmarshal([]byte(request.Headers), &hdrs)
+		}
+		var bodyObj interface{}
+		if request.Body != "" {
+			json.Unmarshal([]byte(request.Body), &bodyObj)
+		}
+		ctx := map[string]interface{}{
+			"request": map[string]interface{}{
+				"url":     request.URL,
+				"method":  request.Method,
+				"headers": hdrs,
+				"body":    bodyObj,
+			},
+		}
+		_, _ = s.scriptService.Run(request.PreRequestScript, ctx)
+		// Note: scripts may mutate ctx in advanced integrations (not applied here)
+	}
+
 	startTime := time.Now()
 
 	// Prepare request
@@ -161,6 +186,29 @@ func (s *RequestService) Execute(requestID, userID uuid.UUID, overrideURL string
 		// Save response headers
 		headersJSON, _ := json.Marshal(resp.Header)
 		execution.ResponseHeaders = string(headersJSON)
+		// Run test script if available
+		if request.TestScript != "" && s.scriptService != nil {
+			// Create test context including response details
+			var respHdrs map[string][]string
+			_ = json.Unmarshal(headersJSON, &respHdrs)
+			testCtx := map[string]interface{}{
+				"request": map[string]interface{}{
+					"url":    request.URL,
+					"method": request.Method,
+				},
+				"response": map[string]interface{}{
+					"status":  resp.StatusCode,
+					"body":    execution.ResponseBody,
+					"headers": respHdrs,
+				},
+			}
+			testRes, _ := s.scriptService.Run(request.TestScript, testCtx)
+			if testRes != nil {
+				if b, err := json.Marshal(testRes); err == nil {
+					execution.TestResults = string(b)
+				}
+			}
+		}
 	}
 
 	if err := s.db.Create(&execution).Error; err != nil {

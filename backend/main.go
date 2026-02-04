@@ -41,14 +41,14 @@ func main() {
 	authService := services.NewAuthService(db, cfg)
 	workspaceService := services.NewWorkspaceService(db)
 	collectionService := services.NewCollectionService(db)
-	requestService := services.NewRequestService(db)
+	scriptService := services.NewScriptService()
+	requestService := services.NewRequestService(db, scriptService)
 	traceService := services.NewTraceService(db)
 	monitoringService := services.NewMonitoringService(db)
 	governanceService := services.NewGovernanceService(db)
 	settingsService := services.NewSettingsService(db)
 	replayService := services.NewReplayService(db)
 	mockService := services.NewMockService(db)
-	scriptService := services.NewScriptService()
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)

@@ -42,65 +42,40 @@ func (s *ScriptService) Run(script string, ctx map[string]interface{}) (*ScriptR
     })
     _ = vm.Set("console", console)
 
-    // pm.test implementation similar to Postman: collects test results
-    pm := vm.NewObject()
-    _ = pm.Set("test", func(call goja.FunctionCall) goja.Value {
+    // pm.test implementation: define a small JS wrapper that calls a Go callback
+    _ = vm.Set("_go_record_test", func(call goja.FunctionCall) goja.Value {
         name := ""
         if len(call.Arguments) > 0 {
             name = call.Argument(0).String()
         }
-
         pass := false
-        msg := ""
-
         if len(call.Arguments) > 1 {
-            // second arg should be a function
-            if fn, ok := goja.AssertFunction(call.Argument(1)); ok {
-                // call it
-                defer func() {
-                    if r := recover(); r != nil {
-                        pass = false
-                        msg = fmt.Sprint(r)
-                    }
-                }()
-                res := fn(goja.FunctionCall{})
-                // Evaluate returned value truthiness using JS-like rules (crude)
-                exported := res.Export()
-                if exported == nil {
-                    pass = false
-                } else {
-                    switch v := exported.(type) {
-                    case bool:
-                        pass = v
-                    case float64:
-                        pass = v != 0
-                    case int:
-                        pass = v != 0
-                    case string:
-                        pass = v != ""
-                    default:
-                        pass = true
-                    }
-                }
-            } else {
-                msg = "second argument to pm.test must be a function"
-            }
-        } else {
-            msg = "pm.test requires a name and a function"
+            pass = call.Argument(1).ToBoolean()
         }
-
-        testEntry := map[string]interface{}{
-            "name": name,
-            "pass": pass,
+        entry := map[string]interface{}{"name": name, "pass": pass}
+        if len(call.Arguments) > 2 {
+            entry["message"] = call.Argument(2).String()
         }
-        if msg != "" {
-            testEntry["message"] = msg
-        }
-        result.Tests = append(result.Tests, testEntry)
-
+        result.Tests = append(result.Tests, entry)
         return goja.Undefined()
     })
-    _ = vm.Set("pm", pm)
+
+    // Define pm.test in VM to use the Go callback; this avoids calling user functions from Go directly.
+    _, _ = vm.RunString(`
+        var pm = {};
+        pm.test = function(name, fn) {
+            if (typeof fn !== 'function') {
+                _go_record_test(name, false, 'second argument must be function');
+                return;
+            }
+            try {
+                var res = fn();
+                _go_record_test(name, !!res);
+            } catch (e) {
+                _go_record_test(name, false, e && e.toString ? e.toString() : String(e));
+            }
+        };
+    `)
 
     // Provide the user context as `ctx` global
     if ctx != nil {

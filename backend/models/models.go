@@ -66,6 +66,8 @@ type Request struct {
 	QueryParams  string         `gorm:"type:jsonb" json:"query_params"` // JSON string
 	Body         string         `gorm:"type:jsonb" json:"body"`         // JSON string
 	Description  string         `json:"description"`
+	PreRequestScript string      `gorm:"type:text" json:"pre_request_script"`
+	TestScript       string      `gorm:"type:text" json:"test_script"`
 	CollectionID uuid.UUID      `gorm:"type:uuid;not null" json:"collection_id"`
 	Collection   Collection     `gorm:"foreignKey:CollectionID" json:"collection,omitempty"`
 	CreatedAt    time.Time      `json:"created_at"`
@@ -84,6 +86,7 @@ type Execution struct {
 	ResponseHeaders string         `gorm:"type:jsonb" json:"response_headers"`
 	TraceID         uuid.UUID      `gorm:"type:uuid" json:"trace_id"`
 	ErrorMessage    string         `json:"error_message,omitempty"`
+	TestResults     string         `gorm:"type:jsonb" json:"test_results"`
 	Timestamp       time.Time      `gorm:"not null" json:"timestamp"`
 	CreatedAt       time.Time      `json:"created_at"`
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`

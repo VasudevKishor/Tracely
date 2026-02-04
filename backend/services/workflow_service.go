@@ -53,7 +53,7 @@ type WorkflowService struct {
 func NewWorkflowService(db *gorm.DB) *WorkflowService {
 	return &WorkflowService{
 		db:             db,
-		requestService: NewRequestService(db),
+		requestService: NewRequestService(db, nil),
 	}
 }
 

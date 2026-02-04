@@ -36,7 +36,7 @@ type LoadTestService struct {
 func NewLoadTestService(db *gorm.DB) *LoadTestService {
 	return &LoadTestService{
 		db:             db,
-		requestService: NewRequestService(db),
+		requestService: NewRequestService(db, nil),
 	}
 }
 
