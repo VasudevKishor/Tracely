@@ -19,6 +19,8 @@ require (
 	gorm.io/gorm v1.30.0
 )
 
+require github.com/dop251/goja v0.0.0-20240215-0.0.0
+
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.17 // indirect

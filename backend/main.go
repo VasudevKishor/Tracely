@@ -48,6 +48,7 @@ func main() {
 	settingsService := services.NewSettingsService(db)
 	replayService := services.NewReplayService(db)
 	mockService := services.NewMockService(db)
+	scriptService := services.NewScriptService()
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -60,11 +61,12 @@ func main() {
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	replayHandler := handlers.NewReplayHandler(replayService)
 	mockHandler := handlers.NewMockHandler(mockService)
+	scriptHandler := handlers.NewScriptHandler(scriptService)
 
 	// Setup router
 	router := setupRouter(cfg, authService, authHandler, workspaceHandler, collectionHandler,
 		requestHandler, traceHandler, monitoringHandler, governanceHandler, settingsHandler,
-		replayHandler, mockHandler)
+		replayHandler, mockHandler, scriptHandler)
 
 	// Create server
 	srv := &http.Server{
@@ -109,7 +111,8 @@ func setupRouter(cfg *config.Config, authService *services.AuthService,
 	governanceHandler *handlers.GovernanceHandler,
 	settingsHandler *handlers.SettingsHandler,
 	replayHandler *handlers.ReplayHandler,
-	mockHandler *handlers.MockHandler) *gin.Engine {
+	mockHandler *handlers.MockHandler,
+	scriptHandler *handlers.ScriptHandler) *gin.Engine {
 
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -219,6 +222,8 @@ func setupRouter(cfg *config.Config, authService *services.AuthService,
 			// User settings routes
 			protected.GET("/users/settings", settingsHandler.GetSettings)
 			protected.PUT("/users/settings", settingsHandler.UpdateSettings)
+			// Scripting: run pre-request or test scripts
+			protected.POST("/scripts/run", scriptHandler.RunScript)
 		}
 	}
 
