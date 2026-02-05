@@ -118,7 +118,7 @@ func (s *WorkflowService) executeSteps(executionID uuid.UUID, steps []WorkflowSt
 		case "request":
 			if step.RequestID != nil {
 				// Execute API request
-				execution, err := s.requestService.Execute(*step.RequestID, userID, "", nil, uuid.New())
+				execution, err := s.requestService.Execute(*step.RequestID, userID, "", nil, uuid.New(), nil)
 				if err != nil {
 					s.updateExecutionStatus(executionID, "failed", fmt.Sprintf("Step %s failed: %v", step.ID, err))
 					return

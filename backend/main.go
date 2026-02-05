@@ -42,6 +42,7 @@ func main() {
 	workspaceService := services.NewWorkspaceService(db)
 	collectionService := services.NewCollectionService(db)
 	scriptService := services.NewScriptService()
+	envService := services.NewEnvironmentService(db)
 	requestService := services.NewRequestService(db, scriptService)
 	traceService := services.NewTraceService(db)
 	monitoringService := services.NewMonitoringService(db)
@@ -54,7 +55,8 @@ func main() {
 	authHandler := handlers.NewAuthHandler(authService)
 	workspaceHandler := handlers.NewWorkspaceHandler(workspaceService)
 	collectionHandler := handlers.NewCollectionHandler(collectionService)
-	requestHandler := handlers.NewRequestHandler(requestService)
+	requestHandler := handlers.NewRequestHandler(requestService, envService)
+	environmentHandler := handlers.NewEnvironmentHandler(envService)
 	traceHandler := handlers.NewTraceHandler(traceService)
 	monitoringHandler := handlers.NewMonitoringHandler(monitoringService)
 	governanceHandler := handlers.NewGovernanceHandler(governanceService)
@@ -66,7 +68,7 @@ func main() {
 	// Setup router
 	router := setupRouter(cfg, authService, authHandler, workspaceHandler, collectionHandler,
 		requestHandler, traceHandler, monitoringHandler, governanceHandler, settingsHandler,
-		replayHandler, mockHandler, scriptHandler)
+		replayHandler, mockHandler, environmentHandler, scriptHandler)
 
 	// Create server
 	srv := &http.Server{
@@ -112,6 +114,7 @@ func setupRouter(cfg *config.Config, authService *services.AuthService,
 	settingsHandler *handlers.SettingsHandler,
 	replayHandler *handlers.ReplayHandler,
 	mockHandler *handlers.MockHandler,
+	environmentHandler *handlers.EnvironmentHandler,
 	scriptHandler *handlers.ScriptHandler) *gin.Engine {
 
 	if cfg.Environment == "production" {
@@ -217,6 +220,12 @@ func setupRouter(cfg *config.Config, authService *services.AuthService,
 				workspaces.GET("/:workspace_id/mocks", mockHandler.GetAll)
 				workspaces.PUT("/:workspace_id/mocks/:mock_id", mockHandler.Update)
 				workspaces.DELETE("/:workspace_id/mocks/:mock_id", mockHandler.Delete)
+
+	                // Environment routes
+	                workspaces.POST("/:workspace_id/environments", environmentHandler.Create)
+	                workspaces.GET("/:workspace_id/environments", environmentHandler.List)
+	                workspaces.GET("/:workspace_id/environments/:env_id", environmentHandler.Get)
+	                workspaces.DELETE("/:workspace_id/environments/:env_id", environmentHandler.Delete)
 			}
 
 			// User settings routes

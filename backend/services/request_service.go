@@ -93,7 +93,7 @@ func (s *RequestService) Delete(requestID, userID uuid.UUID) error {
 	return s.db.Delete(request).Error
 }
 
-func (s *RequestService) Execute(requestID, userID uuid.UUID, overrideURL string, overrideHeaders map[string]string, traceID uuid.UUID) (*models.Execution, error) {
+func (s *RequestService) Execute(requestID, userID uuid.UUID, overrideURL string, overrideHeaders map[string]string, traceID uuid.UUID, variables map[string]interface{}) (*models.Execution, error) {
 	request, err := s.GetByID(requestID, userID)
 	if err != nil {
 		return nil, err
@@ -117,6 +117,10 @@ func (s *RequestService) Execute(requestID, userID uuid.UUID, overrideURL string
 				"headers": hdrs,
 				"body":    bodyObj,
 			},
+		}
+		// attach variables (merge provided variables)
+		if variables != nil {
+			ctx["variables"] = variables
 		}
 		_, _ = s.scriptService.Run(request.PreRequestScript, ctx)
 		// Note: scripts may mutate ctx in advanced integrations (not applied here)
@@ -201,6 +205,10 @@ func (s *RequestService) Execute(requestID, userID uuid.UUID, overrideURL string
 					"body":    execution.ResponseBody,
 					"headers": respHdrs,
 				},
+			}
+			// attach variables so tests can reference them
+			if variables != nil {
+				testCtx["variables"] = variables
 			}
 			testRes, _ := s.scriptService.Run(request.TestScript, testCtx)
 			if testRes != nil {

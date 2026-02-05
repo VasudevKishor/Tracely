@@ -96,7 +96,7 @@ func (s *LoadTestService) executeLoadTest(testID, userID uuid.UUID) {
 			defer wg.Done()
 
 			for j := 0; j < requestsPerWorker; j++ {
-				execution, err := s.requestService.Execute(test.RequestID, userID, "", nil, uuid.New())
+				execution, err := s.requestService.Execute(test.RequestID, userID, "", nil, uuid.New(), nil)
 
 				mu.Lock()
 				if err != nil || execution.StatusCode >= 400 {

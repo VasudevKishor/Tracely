@@ -13,10 +13,11 @@ import (
 
 type RequestHandler struct {
 	requestService *services.RequestService
+	envService     *services.EnvironmentService
 }
 
-func NewRequestHandler(requestService *services.RequestService) *RequestHandler {
-	return &RequestHandler{requestService: requestService}
+func NewRequestHandler(requestService *services.RequestService, envService *services.EnvironmentService) *RequestHandler {
+	return &RequestHandler{requestService: requestService, envService: envService}
 }
 
 type CreateRequestRequest struct {
@@ -127,6 +128,8 @@ type ExecuteRequestRequest struct {
 	OverrideURL     string            `json:"override_url"`
 	OverrideHeaders map[string]string `json:"override_headers"`
 	TraceID         string            `json:"trace_id"`
+	Variables       map[string]interface{} `json:"variables"`
+	EnvironmentID   string                 `json:"environment_id"`
 }
 
 func (h *RequestHandler) Execute(c *gin.Context) {
@@ -149,7 +152,30 @@ func (h *RequestHandler) Execute(c *gin.Context) {
 		traceID = uuid.New()
 	}
 
-	execution, err := h.requestService.Execute(requestID, userID, req.OverrideURL, req.OverrideHeaders, traceID)
+	// Resolve environment variables if environment_id provided
+	vars := req.Variables
+	if req.EnvironmentID != "" {
+		if envID, err := uuid.Parse(req.EnvironmentID); err == nil {
+			if h.envService != nil {
+				if env, err := h.envService.GetByID(envID); err == nil {
+					if parsed, perr := h.envService.ParseVariables(env); perr == nil {
+						// merge env variables into vars (request-provided vars override)
+						if vars == nil {
+							vars = parsed
+						} else {
+							for k, v := range parsed {
+								if _, exists := vars[k]; !exists {
+									vars[k] = v
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	execution, err := h.requestService.Execute(requestID, userID, req.OverrideURL, req.OverrideHeaders, traceID, vars)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

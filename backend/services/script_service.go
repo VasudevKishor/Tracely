@@ -60,9 +60,9 @@ func (s *ScriptService) Run(script string, ctx map[string]interface{}) (*ScriptR
         return goja.Undefined()
     })
 
-    // Define pm.test in VM to use the Go callback; this avoids calling user functions from Go directly.
+    // Define pm.test in VM using the Go helper. Also attach environment object later.
     _, _ = vm.RunString(`
-        var pm = {};
+        if (typeof pm === 'undefined') { pm = {}; }
         pm.test = function(name, fn) {
             if (typeof fn !== 'function') {
                 _go_record_test(name, false, 'second argument must be function');
@@ -81,6 +81,48 @@ func (s *ScriptService) Run(script string, ctx map[string]interface{}) (*ScriptR
     if ctx != nil {
         _ = vm.Set("ctx", ctx)
     }
+
+    // Attach environment helper to pm (if variables were provided in ctx)
+    envVars := map[string]interface{}{}
+    if ctx != nil {
+        if v, ok := ctx["variables"].(map[string]interface{}); ok {
+            for kk, vv := range v {
+                envVars[kk] = vv
+            }
+        }
+    }
+
+    envObj := vm.NewObject()
+    _ = envObj.Set("get", func(call goja.FunctionCall) goja.Value {
+        key := ""
+        if len(call.Arguments) > 0 {
+            key = call.Argument(0).String()
+        }
+        if val, ok := envVars[key]; ok {
+            return vm.ToValue(val)
+        }
+        return goja.Undefined()
+    })
+    _ = envObj.Set("set", func(call goja.FunctionCall) goja.Value {
+        if len(call.Arguments) > 0 {
+            key := call.Argument(0).String()
+            var val interface{} = nil
+            if len(call.Arguments) > 1 {
+                val = call.Argument(1).Export()
+            }
+            envVars[key] = val
+        }
+        return goja.Undefined()
+    })
+    _ = envObj.Set("toObject", func(call goja.FunctionCall) goja.Value {
+        return vm.ToValue(envVars)
+    })
+
+    _ = vm.Set("_pm_env", envObj)
+    _, _ = vm.RunString(`
+        if (typeof pm === 'undefined') { pm = {}; }
+        pm.environment = _pm_env;
+    `)
 
     // Run the script
     _, err := vm.RunString(script)

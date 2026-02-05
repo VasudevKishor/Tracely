@@ -78,6 +78,7 @@ func RunMigrations(db *gorm.DB) error {
 		&models.Replay{},
 		&models.ReplayExecution{},
 		&models.Mock{},
+		&models.Environment{},
 		&models.RefreshToken{},
 	)
 
