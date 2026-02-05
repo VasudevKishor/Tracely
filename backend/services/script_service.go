@@ -17,6 +17,8 @@ func NewScriptService() *ScriptService {
 type ScriptResult struct {
     Logs  []string               `json:"logs"`
     Tests []map[string]interface{} `json:"tests"`
+    // Mutations captured from pre-request script: url, headers, body
+    Mutations map[string]interface{} `json:"mutations,omitempty"`
     Error string                 `json:"error,omitempty"`
 }
 
@@ -41,6 +43,17 @@ func (s *ScriptService) Run(script string, ctx map[string]interface{}) (*ScriptR
         return goja.Undefined()
     })
     _ = vm.Set("console", console)
+
+    // record mutation helper for pre-request scripts
+    _ = vm.Set("_go_record_mutation", func(call goja.FunctionCall) goja.Value {
+        if len(call.Arguments) > 0 {
+            val := call.Argument(0).Export()
+            if m, ok := val.(map[string]interface{}); ok {
+                result.Mutations = m
+            }
+        }
+        return goja.Undefined()
+    })
 
     // pm.test implementation: define a small JS wrapper that calls a Go callback
     _ = vm.Set("_go_record_test", func(call goja.FunctionCall) goja.Value {
@@ -73,6 +86,20 @@ func (s *ScriptService) Run(script string, ctx map[string]interface{}) (*ScriptR
                 _go_record_test(name, !!res);
             } catch (e) {
                 _go_record_test(name, false, e && e.toString ? e.toString() : String(e));
+            }
+        };
+    `)
+
+    // Provide a helper for scripts to mutate the outgoing request:
+    // pm.request.mutate({ url: '...', headers: {...}, body: ... })
+    _, _ = vm.RunString(`
+        if (typeof pm === 'undefined') { pm = {}; }
+        if (typeof pm.request === 'undefined') { pm.request = {}; }
+        pm.request.mutate = function(obj) {
+            try {
+                _go_record_mutation(obj);
+            } catch(e) {
+                // ignore
             }
         };
     `)

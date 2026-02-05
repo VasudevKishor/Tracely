@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -122,8 +123,43 @@ func (s *RequestService) Execute(requestID, userID uuid.UUID, overrideURL string
 		if variables != nil {
 			ctx["variables"] = variables
 		}
-		_, _ = s.scriptService.Run(request.PreRequestScript, ctx)
-		// Note: scripts may mutate ctx in advanced integrations (not applied here)
+		scriptRes, _ := s.scriptService.Run(request.PreRequestScript, ctx)
+		// Apply captured mutations (if any) to the request before sending
+		if scriptRes != nil && scriptRes.Mutations != nil {
+			if u, ok := scriptRes.Mutations["url"].(string); ok && u != "" {
+				request.URL = u
+			}
+			if bval, ok := scriptRes.Mutations["body"]; ok {
+				switch t := bval.(type) {
+				case string:
+					request.Body = t
+				default:
+					if bb, err := json.Marshal(t); err == nil {
+						request.Body = string(bb)
+					}
+				}
+			}
+			if hval, ok := scriptRes.Mutations["headers"].(map[string]interface{}); ok {
+				// merge with existing headers (stored as JSON string)
+				var cur map[string]interface{}
+				if request.Headers != "" {
+					_ = json.Unmarshal([]byte(request.Headers), &cur)
+				} else {
+					cur = map[string]interface{}{}
+				}
+				for kk, vv := range hval {
+					cur[kk] = vv
+				}
+				// convert to map[string]string for storage
+				simple := map[string]string{}
+				for kk, vv := range cur {
+					simple[kk] = fmt.Sprint(vv)
+				}
+				if b, err := json.Marshal(simple); err == nil {
+					request.Headers = string(b)
+				}
+			}
+		}
 	}
 
 	startTime := time.Now()
