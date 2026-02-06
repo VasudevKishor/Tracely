@@ -34,7 +34,7 @@ paths:
                 - email
                 - password
       responses:
-        '200':
+        "200":
           description: Login successful
           content:
             application/json:
@@ -49,7 +49,7 @@ paths:
                     type: string
                   name:
                     type: string
-        '401':
+        "401":
           description: Invalid credentials
 
   /api/v1/auth/register:
@@ -76,7 +76,7 @@ paths:
                 - password
                 - name
       responses:
-        '201':
+        "201":
           description: User created successfully
           content:
             application/json:
@@ -89,7 +89,7 @@ paths:
                     type: string
                   message:
                     type: string
-        '400':
+        "400":
           description: Email already exists
 
   /api/v1/auth/logout:
@@ -100,7 +100,7 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        '200':
+        "200":
           description: Logged out successfully
 
   /api/v1/workspaces:
@@ -111,7 +111,7 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        '200':
+        "200":
           description: List of workspaces
           content:
             application/json:
@@ -121,7 +121,7 @@ paths:
                   workspaces:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Workspace'
+                      $ref: "#/components/schemas/Workspace"
 
     post:
       tags:
@@ -143,12 +143,12 @@ paths:
               required:
                 - name
       responses:
-        '201':
+        "201":
           description: Workspace created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
+                $ref: "#/components/schemas/Workspace"
 
   /api/v1/workspaces/{workspace_id}:
     get:
@@ -164,12 +164,12 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Workspace details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
+                $ref: "#/components/schemas/Workspace"
 
     put:
       tags:
@@ -195,12 +195,12 @@ paths:
                 description:
                   type: string
       responses:
-        '200':
+        "200":
           description: Workspace updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Workspace'
+                $ref: "#/components/schemas/Workspace"
 
     delete:
       tags:
@@ -215,7 +215,7 @@ paths:
           schema:
             type: string
       responses:
-        '204':
+        "204":
           description: Workspace deleted
 
   /api/v1/workspaces/{workspace_id}/collections:
@@ -232,7 +232,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: List of collections
           content:
             application/json:
@@ -242,7 +242,7 @@ paths:
                   collections:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Collection'
+                      $ref: "#/components/schemas/Collection"
 
     post:
       tags:
@@ -270,12 +270,12 @@ paths:
               required:
                 - name
       responses:
-        '201':
+        "201":
           description: Collection created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Collection'
+                $ref: "#/components/schemas/Collection"
 
   /api/v1/workspaces/{workspace_id}/collections/{collection_id}:
     get:
@@ -296,12 +296,12 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Collection details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Collection'
+                $ref: "#/components/schemas/Collection"
 
   /api/v1/workspaces/{workspace_id}/collections/{collection_id}/requests:
     post:
@@ -326,14 +326,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RequestPayload'
+              $ref: "#/components/schemas/RequestPayload"
       responses:
-        '201':
+        "201":
           description: Request created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Request'
+                $ref: "#/components/schemas/Request"
 
   /api/v1/workspaces/{workspace_id}/requests/{request_id}/execute:
     post:
@@ -366,13 +366,17 @@ paths:
                   type: object
                 trace_id:
                   type: string
+                span_id:
+                  type: string
+                parent_span_id:
+                  type: string
       responses:
-        '200':
+        "200":
           description: Request executed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ExecutionResponse'
+                $ref: "#/components/schemas/ExecutionResponse"
 
   /api/v1/workspaces/{workspace_id}/requests/{request_id}/history:
     get:
@@ -403,7 +407,7 @@ paths:
             type: integer
             default: 0
       responses:
-        '200':
+        "200":
           description: Request history
           content:
             application/json:
@@ -413,7 +417,7 @@ paths:
                   executions:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Execution'
+                      $ref: "#/components/schemas/Execution"
                   total:
                     type: integer
 
@@ -455,7 +459,7 @@ paths:
             type: integer
             default: 0
       responses:
-        '200':
+        "200":
           description: List of traces
           content:
             application/json:
@@ -465,7 +469,7 @@ paths:
                   traces:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Trace'
+                      $ref: "#/components/schemas/Trace"
                   total:
                     type: integer
 
@@ -488,12 +492,12 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Trace details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TraceDetail'
+                $ref: "#/components/schemas/TraceDetail"
 
   /api/v1/workspaces/{workspace_id}/monitoring/dashboard:
     get:
@@ -515,12 +519,12 @@ paths:
             enum: [last_hour, last_24h, last_7d, last_30d]
             default: last_hour
       responses:
-        '200':
+        "200":
           description: Dashboard data
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Dashboard'
+                $ref: "#/components/schemas/Dashboard"
 
   /api/v1/workspaces/{workspace_id}/governance/policies:
     get:
@@ -536,7 +540,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: List of policies
           content:
             application/json:
@@ -546,7 +550,7 @@ paths:
                   policies:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Policy'
+                      $ref: "#/components/schemas/Policy"
 
   /api/v1/users/settings:
     get:
@@ -556,12 +560,12 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        '200':
+        "200":
           description: User settings
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserSettings'
+                $ref: "#/components/schemas/UserSettings"
 
     put:
       tags:
@@ -574,9 +578,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserSettings'
+              $ref: "#/components/schemas/UserSettings"
       responses:
-        '200':
+        "200":
           description: Settings updated
 
 components:
@@ -697,6 +701,12 @@ components:
         trace_id:
           type: string
           format: uuid
+        span_id:
+          type: string
+          format: uuid
+        parent_span_id:
+          type: string
+          format: uuid
 
     ExecutionResponse:
       type: object
@@ -713,6 +723,12 @@ components:
         response_headers:
           type: object
         trace_id:
+          type: string
+          format: uuid
+        span_id:
+          type: string
+          format: uuid
+        parent_span_id:
           type: string
           format: uuid
         timestamp:
@@ -747,7 +763,7 @@ components:
         spans:
           type: array
           items:
-            $ref: '#/components/schemas/Span'
+            $ref: "#/components/schemas/Span"
 
     Span:
       type: object

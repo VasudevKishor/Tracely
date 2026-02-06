@@ -83,6 +83,8 @@ type Execution struct {
 	ResponseBody    string         `gorm:"type:text" json:"response_body"`
 	ResponseHeaders string         `gorm:"type:jsonb" json:"response_headers"`
 	TraceID         uuid.UUID      `gorm:"type:uuid" json:"trace_id"`
+	SpanID          *uuid.UUID     `gorm:"type:uuid" json:"span_id,omitempty"`
+	ParentSpanID    *uuid.UUID     `gorm:"type:uuid" json:"parent_span_id,omitempty"`
 	ErrorMessage    string         `json:"error_message,omitempty"`
 	Timestamp       time.Time      `gorm:"not null" json:"timestamp"`
 	CreatedAt       time.Time      `json:"created_at"`
