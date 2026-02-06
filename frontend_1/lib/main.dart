@@ -9,12 +9,18 @@ import 'screens/collections_screen.dart';
 import 'screens/monitoring_screen.dart';
 import 'screens/governance_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/trace_screen.dart';
+import 'screens/replay_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/workspace_provider.dart';
 import 'providers/collection_provider.dart';
 import 'providers/governance_provider.dart';
 import 'package:http/http.dart' as http;
 import 'providers/dashboard_provider.dart';
+import 'providers/trace_provider.dart';
+import 'providers/environment_provider.dart';
+import 'providers/replay_provider.dart';
+import 'providers/request_provider.dart';
 
 void main() {
   runApp(
@@ -25,6 +31,10 @@ void main() {
         ChangeNotifierProvider(create: (_) => CollectionProvider()),
         ChangeNotifierProvider(create: (_) => GovernanceProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        ChangeNotifierProvider(create: (_) => TraceProvider()),
+        ChangeNotifierProvider(create: (_) => ReplayProvider()),
+        ChangeNotifierProvider(create: (_) => RequestProvider()),
+        ChangeNotifierProvider(create: (_) => EnvironmentProvider()),
       ],
       child: const TracelyApp(),
     ),
@@ -71,8 +81,11 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
     const RequestStudioScreen(),
     const CollectionsScreen(),
     const MonitoringScreen(),
+    const ReplayScreen(),
+    const TracesScreen(),
     const GovernanceScreen(),
     const SettingsScreen(),
+    
   ];
 
   final List<String> _screenNames = [
@@ -83,6 +96,8 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
     'STUDIO',
     'COLLECTIONS',
     'MONITORING',
+    'REPLAY',
+    'TRACING',
     'GOVERNANCE',
     'SETTINGS',
   ];

@@ -18,6 +18,12 @@ class ApiService {
   
   // Check if user is authenticated
   bool get isAuthenticated => _accessToken != null && _accessToken!.isNotEmpty;
+
+    // Get access token
+    String? get accessToken => _accessToken;
+
+    // Get refresh token
+    String? get refreshToken => _refreshToken;
   
   // Load tokens from storage
   Future<void> loadTokens() async {
@@ -55,6 +61,10 @@ class ApiService {
     }
     
     return headers;
+  }
+  // Add this public method to ApiService:
+  Future<Map<String, String>> getRequestHeaders({bool includeAuth = true}) async {
+    return await _getHeaders(includeAuth: includeAuth);
   }
   
   // Generic request handler
@@ -133,16 +143,29 @@ class ApiService {
     return data['workspaces'] ?? data['data'] ?? [];
   }
 
-  Future<Map<String, dynamic>> createWorkspace(String name, {String? description}) async {
+  // In your ApiService class, update the createWorkspace method:
+
+  Future<Map<String, dynamic>> createWorkspace(
+    String name, {
+    String? description,
+    // New optional parameters with defaults
+    String? type = 'internal',
+    bool isPublic = false,
+    String? accessType = 'team',
+  }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/workspaces'),
       headers: await _getHeaders(),
       body: json.encode({
         'name': name,
         if (description != null) 'description': description,
+        // Add the new fields
+        'type': type,
+        'is_public': isPublic,
+        'access_type': accessType,
       }),
     );
-  
+
     return await _handleResponse(response);
   }
 
@@ -203,6 +226,19 @@ class ApiService {
   
   // ==================== REQUEST ENDPOINTS ====================
   
+  Future<Map<String, dynamic>> createRequest(
+    String workspaceId,
+    String collectionId,
+    Map<String, dynamic> requestData,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/collections/$collectionId/requests'),
+      headers: await _getHeaders(),
+      body: json.encode(requestData),
+    );
+    return _handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> executeRequest(
     String workspaceId, 
     String requestId
@@ -214,7 +250,7 @@ class ApiService {
     
     return await _handleResponse(response);
   }
-  
+    
   // ==================== MONITORING ENDPOINTS ====================
   
   Future<Map<String, dynamic>> getDashboard(String workspaceId) async {
@@ -305,4 +341,106 @@ class ApiService {
     
     return await _handleResponse(response);
   }
+
+
+
+
+// ==================== MONITORING ====================
+
+  Future<Map<String, dynamic>> getTopology(String workspaceId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/monitoring/topology'),
+      headers: await _getHeaders(),
+    );
+    return _handleResponse(response);
+  }
+
+// ==================== TRACING ====================
+
+  Future<List<dynamic>> getTraces(String workspaceId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/traces'),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    return data['traces'] ?? data['data'] ?? [];
+
+  }
+
+  Future<Map<String, dynamic>> getTraceDetails(
+    String workspaceId,
+    String traceId,
+  ) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/traces/$traceId'),
+      headers: await _getHeaders(),
+    );
+    return _handleResponse(response);
+  }
+
+// ==================== REPLAY ENGINE ====================
+
+  Future<Map<String, dynamic>> createReplay(
+    String workspaceId,
+    Map<String, dynamic> replayData,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/replays'),
+      headers: await _getHeaders(),
+      body: json.encode(replayData),
+    );
+    return _handleResponse(response);
+  }
+
+  Future<void> executeReplay(String workspaceId, String replayId) async {
+    await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/replays/$replayId/execute'),
+      headers: await _getHeaders(),
+    );
+  }
+
+// ==================== MOCKS ====================
+
+  Future<List<dynamic>> getMocks(String workspaceId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/mocks'),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    return data['mocks'] ?? data['data'] ?? [];
+
+  }
+
+  Future<Map<String, dynamic>> generateMockFromTrace(
+    String workspaceId,
+    String traceId,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/mocks/generate'),
+      headers: await _getHeaders(),
+      body: json.encode({'trace_id': traceId}),
+    );
+    return _handleResponse(response);
+  }
+
+  Future<void> updateMock(
+    String workspaceId,
+    String mockId,
+    Map<String, dynamic> updates,
+  ) async {
+    await http.put(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/mocks/$mockId'),
+      headers: await _getHeaders(),
+      body: json.encode(updates),
+    );
+  }
+
+  Future<void> deleteMock(String workspaceId, String mockId) async {
+    await http.delete(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/mocks/$mockId'),
+      headers: await _getHeaders(),
+    );
+  }
+
+  
 }

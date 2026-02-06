@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 
+// Add these enums at the top of the file
+enum WorkspaceType { internal, partner }
+enum AccessType { teamOnly, inviteOnly }
+
 class WorkspaceProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
   
@@ -31,7 +35,7 @@ class WorkspaceProvider with ChangeNotifier {
     try {
       _workspaces = await _apiService.getWorkspaces();
       if (_workspaces.isNotEmpty && _selectedWorkspaceId == null) {
-        _selectedWorkspaceId = _workspaces[0]['id'];
+        _selectedWorkspaceId = _workspaces[0]['id'].toString();
       }
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -47,29 +51,64 @@ class WorkspaceProvider with ChangeNotifier {
     notifyListeners();
   }
   
-  Future<bool> createWorkspace(String name, {String? description}) async {
+  // Enhanced createWorkspace method for multi-step form
+  Future<bool> createWorkspace({
+    required String name,
+    required WorkspaceType type,
+    required bool isPublic,
+    required AccessType accessType,
+    String? description,
+  }) async {
     try {
       _errorMessage = null;
+      _isLoading = true;
       notifyListeners();
       
-      final workspace = await _apiService.createWorkspace(name, description: description);
+      // Convert enums to string values
+      final typeString = type == WorkspaceType.internal ? 'internal' : 'partner';
+      final accessString = accessType == AccessType.teamOnly ? 'team' : 'invite';
+      
+      // Call the updated API method
+      final workspace = await _apiService.createWorkspace(
+        name,
+        description: description,
+        type: typeString,
+        isPublic: isPublic,
+        accessType: accessString,
+      );
+      
+      // Add to workspaces list
       _workspaces.add(workspace);
       
       // Auto-select the newly created workspace
-      _selectedWorkspaceId = workspace['id'];
+      _selectedWorkspaceId = workspace['id'].toString();
       
+      _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
       notifyListeners();
       return false;
     }
   }
   
+  // Keep the simple version for backward compatibility
+  Future<bool> createSimpleWorkspace(String name, {String? description}) async {
+    return await createWorkspace(
+      name: name,
+      type: WorkspaceType.internal,
+      isPublic: false,
+      accessType: AccessType.teamOnly,
+      description: description,
+    );
+  }
+  
   Future<bool> updateWorkspace(String workspaceId, String name, {String? description}) async {
     try {
       _errorMessage = null;
+      _isLoading = true;
       notifyListeners();
       
       await _apiService.updateWorkspace(workspaceId, name, description: description);
@@ -84,10 +123,12 @@ class WorkspaceProvider with ChangeNotifier {
         };
       }
       
+      _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
       notifyListeners();
       return false;
     }
@@ -96,6 +137,7 @@ class WorkspaceProvider with ChangeNotifier {
   Future<bool> deleteWorkspace(String workspaceId) async {
     try {
       _errorMessage = null;
+      _isLoading = true;
       notifyListeners();
       
       await _apiService.deleteWorkspace(workspaceId);
@@ -105,13 +147,15 @@ class WorkspaceProvider with ChangeNotifier {
       
       // If deleted workspace was selected, select first available or null
       if (_selectedWorkspaceId == workspaceId) {
-        _selectedWorkspaceId = _workspaces.isNotEmpty ? _workspaces[0]['id'] : null;
+        _selectedWorkspaceId = _workspaces.isNotEmpty ? _workspaces[0]['id'].toString() : null;
       }
       
+      _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
       notifyListeners();
       return false;
     }
