@@ -22,8 +22,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _loadDashboard() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final workspaceProvider = Provider.of<WorkspaceProvider>(context, listen: false);
-    
+    final workspaceProvider =
+        Provider.of<WorkspaceProvider>(context, listen: false);
+
     if (!authProvider.isAuthenticated) return;
 
     if (workspaceProvider.workspaces.isEmpty) {
@@ -42,7 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Consumer3<DashboardProvider, WorkspaceProvider, AuthProvider>(
-      builder: (context, dashboardProvider, workspaceProvider, authProvider, child) {
+      builder:
+          (context, dashboardProvider, workspaceProvider, authProvider, child) {
         if (!authProvider.isAuthenticated) {
           return _buildUnauthenticatedView();
         }
@@ -201,7 +203,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.folder_off_outlined, size: 64, color: Colors.grey.shade400),
+            Icon(Icons.folder_off_outlined,
+                size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
               'Please select a workspace first',
@@ -218,7 +221,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTopBar(AuthProvider authProvider, WorkspaceProvider workspaceProvider) {
+  Widget _buildTopBar(
+      AuthProvider authProvider, WorkspaceProvider workspaceProvider) {
     return Container(
       height: 70,
       padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -292,10 +296,13 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: Colors.grey.shade900,
             child: Text(
               () {
-                 final name = authProvider.user?['name']?.toString() ?? "";
+                final name = authProvider.user?['name']?.toString() ?? "";
                 return name.isNotEmpty ? name[0].toUpperCase() : "U";
-                }(),
-              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+              }(),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -513,7 +520,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Monitor triggered', 'User Service', '1h ago'),
                 _buildActivityItem(
                     'Environment created', 'Production', '3h ago'),
-                _buildActivityItem('New member added', 'Team Workspace', '5h ago'),
+                _buildActivityItem(
+                    'New member added', 'Team Workspace', '5h ago'),
               ],
             ),
           ),
@@ -668,7 +676,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          _buildErrorItem('High latency detected', 'User Service API', 'Warning'),
+          _buildErrorItem(
+              'High latency detected', 'User Service API', 'Warning'),
           const SizedBox(height: 12),
           _buildErrorItem('Rate limit exceeded', 'Payment API', 'Error'),
           const SizedBox(height: 12),

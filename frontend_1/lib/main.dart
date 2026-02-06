@@ -85,7 +85,6 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
     const TracesScreen(),
     const GovernanceScreen(),
     const SettingsScreen(),
-    
   ];
 
   final List<String> _screenNames = [
@@ -110,59 +109,61 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
           _screens[_currentScreen],
 
           // Add this Floating button at bottom right for backend test
-    Positioned(
-      bottom: 80,
-      right: 16,
-      child:  FloatingActionButton(
-  backgroundColor: Colors.green,
-  child: const Icon(Icons.cloud_done),
-  tooltip: 'Check Backend',
-  onPressed: () async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          Positioned(
+              bottom: 80,
+              right: 16,
+              child: FloatingActionButton(
+                backgroundColor: Colors.green,
+                child: const Icon(Icons.cloud_done),
+                tooltip: 'Check Backend',
+                onPressed: () async {
+                  final authProvider =
+                      Provider.of<AuthProvider>(context, listen: false);
 
-    if (!authProvider.isAuthenticated || authProvider.user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ You need to login first')),
-      );
-      return;
-    }
+                  if (!authProvider.isAuthenticated ||
+                      authProvider.user == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('❌ You need to login first')),
+                    );
+                    return;
+                  }
 
-    try {
-      final token = authProvider.user!['token']; // get JWT
+                  try {
+                    final token = authProvider.user!['token']; // get JWT
 
-      final response = await http.get(
-        Uri.parse('http://localhost:8081/api/v1/workspaces'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+                    final response = await http.get(
+                      Uri.parse('http://localhost:8081/api/v1/workspaces'),
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer $token',
+                      },
+                    );
 
-      String message;
-      if (response.statusCode == 200) {
-        message = '✅ Backend is reachable!';
-      } else if (response.statusCode == 401) {
-        message = '⚠️ Unauthorized. Please login again.';
-      } else {
-        message = '⚠️ Backend returned status: ${response.statusCode}';
-      }
+                    String message;
+                    if (response.statusCode == 200) {
+                      message = '✅ Backend is reachable!';
+                    } else if (response.statusCode == 401) {
+                      message = '⚠️ Unauthorized. Please login again.';
+                    } else {
+                      message =
+                          '⚠️ Backend returned status: ${response.statusCode}';
+                    }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Error connecting: $e')),
-        );
-      }
-    }
-  },
-)
-
-    ),
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(message)),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('❌ Error connecting: $e')),
+                      );
+                    }
+                  }
+                },
+              )),
 
           // Development navigation bar
           Positioned(
@@ -197,39 +198,26 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
                         ),
                       ),
                     ),
-                    ...List.generate(_screenNames.length, (index) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _currentScreen = index;
-                            });
-                          },
-                          style: TextButton.styleFrom(
-                            backgroundColor: _currentScreen == index
-                                ? Colors.white
-                                : Colors.transparent,
-                            foregroundColor: _currentScreen == index
-                                ? Colors.grey.shade900
-                                : Colors.grey.shade400,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                          child: Text(
-                            _screenNames[index],
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: PopupMenuButton<int>(
+                        tooltip: 'Open navigation',
+                        icon: Icon(Icons.menu, color: Colors.grey.shade300),
+                        onSelected: (index) {
+                          setState(() {
+                            _currentScreen = index;
+                          });
+                        },
+                        itemBuilder: (context) {
+                          return List.generate(_screenNames.length, (index) {
+                            return PopupMenuItem<int>(
+                              value: index,
+                              child: Text(_screenNames[index]),
+                            );
+                          });
+                        },
+                      ),
+                    ),
                     const SizedBox(width: 16),
                   ],
                 ),
