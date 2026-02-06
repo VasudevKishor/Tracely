@@ -91,7 +91,7 @@ func (s *RequestService) Delete(requestID, userID uuid.UUID) error {
 	return s.db.Delete(request).Error
 }
 
-func (s *RequestService) Execute(requestID, userID uuid.UUID, overrideURL string, overrideHeaders map[string]string, traceID uuid.UUID) (*models.Execution, error) {
+func (s *RequestService) Execute(requestID, userID uuid.UUID, overrideURL string, overrideHeaders map[string]string, traceID uuid.UUID, spanID, parentSpanID *uuid.UUID) (*models.Execution, error) {
 	request, err := s.GetByID(requestID, userID)
 	if err != nil {
 		return nil, err
@@ -134,6 +134,16 @@ func (s *RequestService) Execute(requestID, userID uuid.UUID, overrideURL string
 		httpReq.Header.Set("X-Trace-ID", traceID.String())
 	}
 
+	// Add span context headers
+	if spanID == nil || *spanID == uuid.Nil {
+		newSpanID := uuid.New()
+		spanID = &newSpanID
+	}
+	httpReq.Header.Set("X-Span-ID", spanID.String())
+	if parentSpanID != nil && *parentSpanID != uuid.Nil {
+		httpReq.Header.Set("X-Parent-Span-ID", parentSpanID.String())
+	}
+
 	// Execute request
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(httpReq)
@@ -144,6 +154,8 @@ func (s *RequestService) Execute(requestID, userID uuid.UUID, overrideURL string
 		RequestID:      requestID,
 		ResponseTimeMs: responseTime,
 		TraceID:        traceID,
+		SpanID:         spanID,
+		ParentSpanID:   parentSpanID,
 		Timestamp:      startTime,
 	}
 
