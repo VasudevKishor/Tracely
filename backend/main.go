@@ -48,6 +48,7 @@ func main() {
 	settingsService := services.NewSettingsService(db)
 	replayService := services.NewReplayService(db)
 	mockService := services.NewMockService(db)
+	environmentService := services.NewEnvironmentService(db)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -60,11 +61,12 @@ func main() {
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	replayHandler := handlers.NewReplayHandler(replayService)
 	mockHandler := handlers.NewMockHandler(mockService)
+	environmentHandler := handlers.NewEnvironmentHandler(environmentService)
 
 	// Setup router
 	router := setupRouter(cfg, authService, authHandler, workspaceHandler, collectionHandler,
 		requestHandler, traceHandler, monitoringHandler, governanceHandler, settingsHandler,
-		replayHandler, mockHandler)
+		replayHandler, mockHandler, environmentHandler)
 
 	// Create server
 	srv := &http.Server{
@@ -109,7 +111,8 @@ func setupRouter(cfg *config.Config, authService *services.AuthService,
 	governanceHandler *handlers.GovernanceHandler,
 	settingsHandler *handlers.SettingsHandler,
 	replayHandler *handlers.ReplayHandler,
-	mockHandler *handlers.MockHandler) *gin.Engine {
+	mockHandler *handlers.MockHandler,
+	environmentHandler *handlers.EnvironmentHandler) *gin.Engine {
 
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -214,6 +217,16 @@ func setupRouter(cfg *config.Config, authService *services.AuthService,
 				workspaces.GET("/:workspace_id/mocks", mockHandler.GetAll)
 				workspaces.PUT("/:workspace_id/mocks/:mock_id", mockHandler.Update)
 				workspaces.DELETE("/:workspace_id/mocks/:mock_id", mockHandler.Delete)
+
+				// ========== ENVIRONMENT ROUTES ==========
+				workspaces.GET("/:workspace_id/environments", environmentHandler.GetEnvironments)
+				workspaces.POST("/:workspace_id/environments", environmentHandler.CreateEnvironment)
+				workspaces.GET("/:workspace_id/environments/:environment_id", environmentHandler.GetEnvironmentVariables)
+				workspaces.PUT("/:workspace_id/environments/:environment_id", environmentHandler.UpdateEnvironment)
+				workspaces.DELETE("/:workspace_id/environments/:environment_id", environmentHandler.DeleteEnvironment)
+				workspaces.POST("/:workspace_id/environments/:environment_id/variables", environmentHandler.AddEnvironmentVariable)
+				workspaces.PUT("/:workspace_id/environments/:environment_id/variables/:variable_id", environmentHandler.UpdateEnvironmentVariable)
+				workspaces.DELETE("/:workspace_id/environments/:environment_id/variables/:variable_id", environmentHandler.DeleteEnvironmentVariable)
 			}
 
 			// User settings routes

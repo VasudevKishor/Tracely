@@ -230,3 +230,48 @@ type RefreshToken struct {
 	RevokedAt *time.Time     `json:"revoked_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
+
+// models/models.go - Add these models
+
+type Environment struct {
+	ID          uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	WorkspaceID uuid.UUID `gorm:"type:uuid;not null"`
+	Name        string    `gorm:"type:varchar(255);not null"`
+	Type        string    `gorm:"type:varchar(50);not null"` // global, development, staging, production
+	Description string    `gorm:"type:text"`
+	IsActive    bool      `gorm:"default:true"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   gorm.DeletedAt `gorm:"index"`
+
+	Workspace Workspace `gorm:"foreignKey:WorkspaceID"`
+	Variables []EnvironmentVariable
+	Secrets   []EnvironmentSecret
+}
+
+type EnvironmentVariable struct {
+	ID            uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	EnvironmentID uuid.UUID `gorm:"type:uuid;not null"`
+	Key           string    `gorm:"type:varchar(255);not null"`
+	Value         string    `gorm:"type:text;not null"`
+	Type          string    `gorm:"type:varchar(50)"` // string, number, boolean, json
+	Description   string    `gorm:"type:text"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     gorm.DeletedAt `gorm:"index"`
+
+	Environment Environment `gorm:"foreignKey:EnvironmentID"`
+}
+
+type EnvironmentSecret struct {
+	ID            uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	EnvironmentID uuid.UUID `gorm:"type:uuid;not null"`
+	Key           string    `gorm:"type:varchar(255);not null"`
+	Value         string    `gorm:"type:text;not null"`
+	Description   string    `gorm:"type:text"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     gorm.DeletedAt `gorm:"index"`
+
+	Environment Environment `gorm:"foreignKey:EnvironmentID"`
+}
