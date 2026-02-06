@@ -111,6 +111,8 @@ func createIndexes(db *gorm.DB) {
 	// Execution indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_executions_request_id ON executions(request_id);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_executions_trace_id ON executions(trace_id);")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_executions_span_id ON executions(span_id);")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_executions_parent_span_id ON executions(parent_span_id);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_executions_timestamp ON executions(timestamp);")
 
 	// Trace indexes

@@ -18,13 +18,15 @@ func RequestLogger() gin.HandlerFunc {
 		// Log request details
 		duration := time.Since(startTime)
 		log.Printf(
-			"[%s] %s %s - Status: %d - Duration: %v - TraceID: %s",
+			"[%s] %s %s - Status: %d - Duration: %v - TraceID: %s - SpanID: %s - ParentSpanID: %s",
 			c.Request.Method,
 			c.Request.URL.Path,
 			c.ClientIP(),
 			c.Writer.Status(),
 			duration,
 			c.GetString("trace_id"),
+			c.GetString("span_id"),
+			c.GetString("parent_span_id"),
 		)
 	}
 }

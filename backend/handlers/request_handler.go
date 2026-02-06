@@ -127,6 +127,8 @@ type ExecuteRequestRequest struct {
 	OverrideURL     string            `json:"override_url"`
 	OverrideHeaders map[string]string `json:"override_headers"`
 	TraceID         string            `json:"trace_id"`
+	SpanID          string            `json:"span_id"`
+	ParentSpanID    string            `json:"parent_span_id"`
 }
 
 func (h *RequestHandler) Execute(c *gin.Context) {
@@ -149,7 +151,23 @@ func (h *RequestHandler) Execute(c *gin.Context) {
 		traceID = uuid.New()
 	}
 
-	execution, err := h.requestService.Execute(requestID, userID, req.OverrideURL, req.OverrideHeaders, traceID)
+	var spanID *uuid.UUID
+	if req.SpanID != "" {
+		parsedSpanID, err := uuid.Parse(req.SpanID)
+		if err == nil {
+			spanID = &parsedSpanID
+		}
+	}
+
+	var parentSpanID *uuid.UUID
+	if req.ParentSpanID != "" {
+		parsedParentID, err := uuid.Parse(req.ParentSpanID)
+		if err == nil {
+			parentSpanID = &parsedParentID
+		}
+	}
+
+	execution, err := h.requestService.Execute(requestID, userID, req.OverrideURL, req.OverrideHeaders, traceID, spanID, parentSpanID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
