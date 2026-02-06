@@ -97,7 +97,10 @@ class LandingScreen extends StatelessWidget {
               backgroundColor: Colors.grey.shade900,
               child: Text(
                 authProvider.user?['name']?[0]?.toUpperCase() ?? 'U',
-                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600),
               ),
             ),
           ] else ...[
@@ -126,7 +129,8 @@ class LandingScreen extends StatelessWidget {
               children: [
                 if (authProvider.isAuthenticated) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.green.shade50,
                       borderRadius: BorderRadius.circular(20),
@@ -135,7 +139,8 @@ class LandingScreen extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle, color: Colors.green.shade700, size: 16),
+                        Icon(Icons.check_circle,
+                            color: Colors.green.shade700, size: 16),
                         const SizedBox(width: 8),
                         Text(
                           'You\'re logged in!',
@@ -199,7 +204,8 @@ class LandingScreen extends StatelessWidget {
                               const SizedBox(width: 8),
                               Container(
                                 margin: const EdgeInsets.all(4),
-                                padding: const EdgeInsets.symmetric(horizontal: 32),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 32),
                                 height: 44,
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade900,
@@ -228,7 +234,8 @@ class LandingScreen extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey.shade900,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(25),
                       ),
@@ -320,7 +327,7 @@ class LandingScreen extends StatelessWidget {
   }
 
   // ... keep all other methods (buildWhatIsTracely, buildFeatureCards, etc.)
-  
+
   Widget _buildWhatIsTracely() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 60),

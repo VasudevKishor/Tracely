@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/workspace_provider.dart';
 import '../providers/auth_provider.dart';
+import 'workspace_setup_screen.dart';
 
 class WorkspacesScreen extends StatefulWidget {
   const WorkspacesScreen({Key? key}) : super(key: key);
@@ -13,6 +14,9 @@ class WorkspacesScreen extends StatefulWidget {
 class _WorkspacesScreenState extends State<WorkspacesScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _searchController = TextEditingController();
+  String _filterType = 'All';
+  String _filterAccess = 'All';
 
   @override
   void initState() {
@@ -26,6 +30,7 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -78,11 +83,14 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
 
               final workspaceProvider = Provider.of<WorkspaceProvider>(context, listen: false);
               final success = await workspaceProvider.createWorkspace(
-                _nameController.text,
-                description: _descriptionController.text.isEmpty 
-                    ? null 
-                    : _descriptionController.text,
-              );
+              name: _nameController.text,  // Named parameter
+              type: WorkspaceType.internal,  // Default type
+              isPublic: false,  // Default to private
+              accessType: AccessType.teamOnly,  // Default access
+              description: _descriptionController.text.isEmpty 
+                  ? null 
+                  : _descriptionController.text,
+            );
 
               if (success) {
                 _nameController.clear();
@@ -138,69 +146,144 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
               _buildTopBar(authProvider),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(40),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Workspaces',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade900,
-                            ),
-                          ),
-                          const Spacer(),
-                          InkWell(
-                            onTap: _showCreateWorkspaceDialog,
-                            child: Container(
-                              height: 40,
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade900,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.add, color: Colors.white, size: 18),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Create Workspace',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
+                      // Header section with title and create button
+                      Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.fromLTRB(48, 32, 48, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Your workspaces',
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.grey.shade900,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'A directory of your workspaces.',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey.shade600,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Spacer(),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Colors.orange.shade600, Colors.orange.shade500],
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.orange.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const WorkspaceSetupScreen(),
+                                          ),
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.add, color: Colors.white, size: 20),
+                                            const SizedBox(width: 8),
+                                            const Text(
+                                              'Create Workspace',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Collaborate with your team on API projects',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 32),
 
-                      // Show empty state or workspace grid
                       if (workspaceProvider.workspaces.isEmpty)
                         _buildEmptyState()
-                      else
-                        _buildWorkspaceGrid(workspaceProvider),
+                      else ...[
+                        // Search and filters section
+                        Container(
+                          color: Colors.white,
+                          padding: const EdgeInsets.fromLTRB(48, 0, 48, 24),
+                          child: Column(
+                            children: [
+                              // Search bar
+                              Container(
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey.shade200),
+                                ),
+                                child: TextField(
+                                  controller: _searchController,
+                                  decoration: InputDecoration(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    hintText: 'Search workspaces...',
+                                    hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                                    prefixIcon: Icon(Icons.search, color: Colors.grey.shade400, size: 20),
+                                    border: InputBorder.none,
+                                  ),
+                                  onChanged: (value) => setState(() {}),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Filter buttons
+                              Row(
+                                children: [
+                                  _buildFilterChip('Type', ['All', 'Internal', 'External', 'Team'], _filterType, (value) {
+                                    setState(() => _filterType = value);
+                                  }),
+                                  const SizedBox(width: 12),
+                                  _buildFilterChip('Access', ['All', 'Only you', 'Shared'], _filterAccess, (value) {
+                                    setState(() => _filterAccess = value);
+                                  }),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Workspaces table
+                        _buildWorkspacesTable(workspaceProvider),
+                      ],
 
                       const SizedBox(height: 40),
-
-                      // Activity Timeline (static for now - can be made dynamic later)
-                      if (workspaceProvider.workspaces.isNotEmpty)
-                        _buildActivityTimeline(),
                     ],
                   ),
                 ),
@@ -284,30 +367,88 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
     );
   }
 
-  Widget _buildWorkspaceGrid(WorkspaceProvider provider) {
-    // Calculate grid count based on number of workspaces
-    final workspaceCount = provider.workspaces.length;
-    final crossAxisCount = workspaceCount < 3 ? workspaceCount : 3;
+  Widget _buildWorkspacesTable(WorkspaceProvider provider) {
+    // Filter workspaces based on search and filters
+    final filteredWorkspaces = provider.workspaces.where((ws) {
+      final matchesSearch = _searchController.text.isEmpty ||
+          ws['name'].toString().toLowerCase().contains(_searchController.text.toLowerCase());
+      return matchesSearch;
+    }).toList();
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 20,
-        mainAxisSpacing: 20,
-        childAspectRatio: 1.3,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 48),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      itemCount: provider.workspaces.length,
-      itemBuilder: (context, index) {
-        final workspace = provider.workspaces[index];
-        return _buildWorkspaceCard(workspace, provider);
-      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          children: [
+            // Table header
+            Container(
+              color: Colors.grey.shade50,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: _buildHeaderCell('Name'),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: _buildHeaderCell('Created by'),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: _buildHeaderCell('Type'),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: _buildHeaderCell('Access'),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: _buildHeaderCell('Last updated'),
+                  ),
+                  const SizedBox(width: 24),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: Colors.grey.shade200),
+            // Table rows
+            ...List.generate(filteredWorkspaces.length, (index) {
+              final workspace = filteredWorkspaces[index];
+              final isLast = index == filteredWorkspaces.length - 1;
+              return _buildWorkspaceRow(workspace, isLast);
+            }),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildWorkspaceCard(Map<String, dynamic> workspace, WorkspaceProvider provider) {
-    final isSelected = provider.selectedWorkspaceId == workspace['id'];
+  Widget _buildHeaderCell(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: Colors.grey.shade600,
+        letterSpacing: 0.3,
+      ),
+    );
+  }
+
+  Widget _buildWorkspaceRow(Map<String, dynamic> workspace, bool isLast) {
     final colors = [
       Colors.blue.shade400,
       Colors.green.shade400,
@@ -321,171 +462,209 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
 
     return InkWell(
       onTap: () {
-        provider.selectWorkspace(workspace['id']);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Selected workspace: ${workspace['name']}'),
-            duration: const Duration(seconds: 1),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => WorkspaceSetupScreen(workspace: workspace),
           ),
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? color : Colors.grey.shade200,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withOpacity(0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  )
-                ]
-              : null,
+          border: isLast ? null : Border(bottom: BorderSide(color: Colors.grey.shade200)),
+          color: Colors.transparent,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.workspaces, color: color, size: 24),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Row(
+            children: [
+              // Name column
+              Expanded(
+                flex: 3,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.workspaces, color: color, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            workspace['name'] ?? 'Unnamed',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade900,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            workspace['description'] ?? 'No description',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                if (isSelected)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'ACTIVE',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  )
-                else
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Active',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.green.shade700,
-                      ),
-                    ),
+              ),
+              // Created by column
+              Expanded(
+                flex: 2,
+                child: Text(
+                  workspace['created_by'] ?? 'You',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade700,
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              workspace['name'] ?? 'Unnamed Workspace',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade900,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              workspace['description'] ?? 'No description',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Created ${_formatDate(workspace['created_at'])}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade500,
-              ),
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () {
-                    provider.selectWorkspace(workspace['id']);
-                  },
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              // Type column
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'Open →',
+                    'Internal',
                     style: TextStyle(
-                      color: Colors.grey.shade900,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.blue.shade700,
                     ),
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+              // Access column
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Only you',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                ),
+              ),
+              // Last updated column
+              Expanded(
+                flex: 2,
+                child: Text(
+                  _formatDate(workspace['created_at']),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // More options icon
+              PopupMenuButton(
+                offset: const Offset(-10, 40),
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    child: const Row(
+                      children: [
+                        Icon(Icons.edit, size: 16),
+                        SizedBox(width: 8),
+                        Text('Edit'),
+                      ],
+                    ),
+                    onTap: () {},
+                  ),
+                  PopupMenuItem(
+                    child: const Row(
+                      children: [
+                        Icon(Icons.content_copy, size: 16),
+                        SizedBox(width: 8),
+                        Text('Duplicate'),
+                      ],
+                    ),
+                    onTap: () {},
+                  ),
+                  PopupMenuItem(
+                    child: const Row(
+                      children: [
+                        Icon(Icons.delete, size: 16, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Delete', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                    onTap: () {},
+                  ),
+                ],
+                child: Icon(Icons.more_vert, size: 20, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildActivityTimeline() {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Recent Workspace Activity',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade900,
+  Widget _buildFilterChip(String label, List<String> options, String selected, Function(String) onChanged) {
+    return PopupMenuButton<String>(
+      onSelected: onChanged,
+      itemBuilder: (context) => options.map((option) {
+        return PopupMenuItem<String>(
+          value: option,
+          child: Row(
+            children: [
+              if (selected == option) const Icon(Icons.check, size: 16, color: Colors.orange),
+              if (selected == option) const SizedBox(width: 8),
+              Text(option),
+            ],
+          ),
+        );
+      }).toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
             ),
-          ),
-          const SizedBox(height: 24),
-          _buildTimelineItem(
-            'You',
-            'created a new workspace',
-            'Just now',
-          ),
-          _buildTimelineItem(
-            'System',
-            'initialized workspace settings',
-            'Just now',
-          ),
-        ],
+            const SizedBox(width: 4),
+            Icon(Icons.unfold_more, size: 14, color: Colors.grey.shade600),
+          ],
+        ),
       ),
     );
   }
@@ -572,68 +751,6 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
     );
   }
 
-  Widget _buildTimelineItem(String user, String action, String time) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Column(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade900,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              Container(
-                width: 2,
-                height: 40,
-                color: Colors.grey.shade300,
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade900,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: user,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      TextSpan(
-                        text: ' $action',
-                        style: TextStyle(color: Colors.grey.shade700),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  time,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _formatDate(dynamic date) {
     if (date == null) return 'recently';
     try {
@@ -641,7 +758,9 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
       final now = DateTime.now();
       final difference = now.difference(dateTime);
       
-      if (difference.inDays > 30) {
+      if (difference.inDays > 365) {
+        return '1 year ago';
+      } else if (difference.inDays > 30) {
         return '${difference.inDays ~/ 30} months ago';
       } else if (difference.inDays > 7) {
         return '${difference.inDays ~/ 7} weeks ago';

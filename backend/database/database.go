@@ -1,10 +1,10 @@
 package database
 
 import (
-	"fmt"
-	"log"
 	"backend/config"
 	"backend/models"
+	"fmt"
+	"log"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -79,6 +79,9 @@ func RunMigrations(db *gorm.DB) error {
 		&models.ReplayExecution{},
 		&models.Mock{},
 		&models.RefreshToken{},
+		&models.Environment{},
+		&models.EnvironmentVariable{},
+		&models.EnvironmentSecret{},
 	)
 
 	if err != nil {
@@ -98,36 +101,36 @@ func createIndexes(db *gorm.DB) {
 
 	// Workspace indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces(owner_id);")
-	
+
 	// Collection indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_collections_workspace_id ON collections(workspace_id);")
-	
+
 	// Request indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_requests_collection_id ON requests(collection_id);")
-	
+
 	// Execution indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_executions_request_id ON executions(request_id);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_executions_trace_id ON executions(trace_id);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_executions_timestamp ON executions(timestamp);")
-	
+
 	// Trace indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_traces_workspace_id ON traces(workspace_id);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_traces_service_name ON traces(service_name);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_traces_start_time ON traces(start_time);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_traces_status ON traces(status);")
-	
+
 	// Span indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_spans_trace_id ON spans(trace_id);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_spans_parent_span_id ON spans(parent_span_id);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_spans_service_name ON spans(service_name);")
-	
+
 	// Policy indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_policies_workspace_id ON policies(workspace_id);")
-	
+
 	// Replay indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_replays_workspace_id ON replays(workspace_id);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_replays_status ON replays(status);")
-	
+
 	// Mock indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_mocks_workspace_id ON mocks(workspace_id);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_mocks_enabled ON mocks(enabled);")

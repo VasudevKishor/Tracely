@@ -22,18 +22,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _loadDashboard() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final workspaceProvider = Provider.of<WorkspaceProvider>(context, listen: false);
-    
+    final workspaceProvider =
+        Provider.of<WorkspaceProvider>(context, listen: false);
+
     if (!authProvider.isAuthenticated) return;
 
     if (workspaceProvider.workspaces.isEmpty) {
       workspaceProvider.loadWorkspaces().then((_) {
-        if (workspaceProvider.selectedWorkspaceId != null) {
+        if (workspaceProvider.selectedWorkspaceId != null && mounted) {
           Provider.of<DashboardProvider>(context, listen: false)
               .loadDashboard(workspaceProvider.selectedWorkspaceId!);
         }
       });
-    } else if (workspaceProvider.selectedWorkspaceId != null) {
+    } else if (workspaceProvider.selectedWorkspaceId != null && mounted) {
       Provider.of<DashboardProvider>(context, listen: false)
           .loadDashboard(workspaceProvider.selectedWorkspaceId!);
     }
@@ -42,7 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Consumer3<DashboardProvider, WorkspaceProvider, AuthProvider>(
-      builder: (context, dashboardProvider, workspaceProvider, authProvider, child) {
+      builder:
+          (context, dashboardProvider, workspaceProvider, authProvider, child) {
         if (!authProvider.isAuthenticated) {
           return _buildUnauthenticatedView();
         }
@@ -88,7 +90,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Expanded(
                                   child: _buildMetricCard(
                                     'API Uptime',
-                                    '${dashboardProvider.uptime}%',
+                                    // Convert to double first, then format
+                                    '${(dashboardProvider.uptime ?? 0.0).toDouble().toStringAsFixed(2)}%',
                                     Icons.check_circle_outline,
                                     Colors.green.shade400,
                                     '+0.03% vs last week',
@@ -98,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Expanded(
                                   child: _buildMetricCard(
                                     'Error Rate',
-                                    '${dashboardProvider.errorRate}%',
+                                    '${dashboardProvider.errorRate?.toStringAsFixed(2) ?? '0.00'}%',
                                     Icons.error_outline,
                                     Colors.orange.shade400,
                                     '-0.05% vs last week',
@@ -108,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Expanded(
                                   child: _buildMetricCard(
                                     'Avg Latency',
-                                    '${dashboardProvider.avgLatency}ms',
+                                    '${dashboardProvider.avgLatency?.toString() ?? '0'}ms',
                                     Icons.speed,
                                     Colors.blue.shade400,
                                     '+12ms vs last week',
@@ -118,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Expanded(
                                   child: _buildMetricCard(
                                     'Total Requests',
-                                    dashboardProvider.totalRequests,
+                                    '${dashboardProvider.totalRequests?.toString() ?? '0'}',
                                     Icons.trending_up,
                                     Colors.purple.shade400,
                                     '+320K this week',
@@ -138,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: _buildChartCard(
                                     'Request Volume',
                                     'Last 7 days',
-                                    350,
+                                    350.0,
                                   ),
                                 ),
                                 const SizedBox(width: 20),
@@ -200,7 +203,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.folder_off_outlined, size: 64, color: Colors.grey.shade400),
+            Icon(Icons.folder_off_outlined,
+                size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
               'Please select a workspace first',
@@ -217,7 +221,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTopBar(AuthProvider authProvider, WorkspaceProvider workspaceProvider) {
+  Widget _buildTopBar(
+      AuthProvider authProvider, WorkspaceProvider workspaceProvider) {
     return Container(
       height: 70,
       padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -278,9 +283,11 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: const Icon(Icons.logout, size: 20),
               onPressed: () async {
                 await authProvider.logout();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Logged out')),
-                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Logged out')),
+                  );
+                }
               },
               tooltip: 'Logout',
             ),
@@ -288,8 +295,14 @@ class _HomeScreenState extends State<HomeScreen> {
             radius: 18,
             backgroundColor: Colors.grey.shade900,
             child: Text(
-              authProvider.user?['name']?[0]?.toUpperCase() ?? 'U',
-              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+              () {
+                final name = authProvider.user?['name']?.toString() ?? "";
+                return name.isNotEmpty ? name[0].toUpperCase() : "U";
+              }(),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -507,7 +520,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Monitor triggered', 'User Service', '1h ago'),
                 _buildActivityItem(
                     'Environment created', 'Production', '3h ago'),
-                _buildActivityItem('New member added', 'Team Workspace', '5h ago'),
+                _buildActivityItem(
+                    'New member added', 'Team Workspace', '5h ago'),
               ],
             ),
           ),
@@ -662,7 +676,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          _buildErrorItem('High latency detected', 'User Service API', 'Warning'),
+          _buildErrorItem(
+              'High latency detected', 'User Service API', 'Warning'),
           const SizedBox(height: 12),
           _buildErrorItem('Rate limit exceeded', 'Payment API', 'Error'),
           const SizedBox(height: 12),

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"backend/middlewares"
 	"backend/services"
 	"net/http"
 
@@ -100,8 +101,16 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 }
 
 func (h *AuthHandler) VerifyToken(c *gin.Context) {
+	userID, err := middlewares.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Token is valid",
-		"user_id": c.GetString("user_id"),
+		"user_id": userID.String(),
 	})
 }

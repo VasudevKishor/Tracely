@@ -1,8 +1,8 @@
 package services
 
 import (
-	"errors"
 	"backend/models"
+	"errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -36,17 +36,25 @@ func (s *WorkspaceService) Create(name, description string, ownerID uuid.UUID) (
 	if err := s.db.Create(&member).Error; err != nil {
 		return nil, err
 	}
+	if err := s.db.
+		Preload("Owner").
+		Preload("Members").
+		Preload("Members.User").
+		First(&workspace, workspace.ID).Error; err != nil {
+		return nil, err
+	}
 
 	return &workspace, nil
 }
 
 func (s *WorkspaceService) GetAll(userID uuid.UUID) ([]models.Workspace, error) {
 	var workspaces []models.Workspace
-	
+
 	// Get workspaces where user is a member
 	err := s.db.
 		Joins("JOIN workspace_members ON workspace_members.workspace_id = workspaces.id").
 		Where("workspace_members.user_id = ?", userID).
+		Preload("Owner").
 		Preload("Members").
 		Preload("Members.User").
 		Find(&workspaces).Error
@@ -56,13 +64,16 @@ func (s *WorkspaceService) GetAll(userID uuid.UUID) ([]models.Workspace, error) 
 
 func (s *WorkspaceService) GetByID(workspaceID, userID uuid.UUID) (*models.Workspace, error) {
 	var workspace models.Workspace
-	
+	if err := s.db.First(&workspace, workspaceID).Error; err != nil {
+		return nil, err // gorm.ErrRecordNotFound → 404
+	}
 	// Check if user has access to workspace
 	if !s.HasAccess(workspaceID, userID) {
 		return nil, errors.New("access denied")
 	}
 
 	err := s.db.
+		Preload("Owner").
 		Preload("Members").
 		Preload("Members.User").
 		First(&workspace, workspaceID).Error
@@ -76,7 +87,7 @@ func (s *WorkspaceService) GetByID(workspaceID, userID uuid.UUID) (*models.Works
 
 func (s *WorkspaceService) Update(workspaceID, userID uuid.UUID, name, description string) (*models.Workspace, error) {
 	var workspace models.Workspace
-	
+
 	// Check if user is admin
 	if !s.IsAdmin(workspaceID, userID) {
 		return nil, errors.New("permission denied")
