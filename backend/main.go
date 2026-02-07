@@ -49,6 +49,7 @@ func main() {
 	replayService := services.NewReplayService(db)
 	mockService := services.NewMockService(db)
 	environmentService := services.NewEnvironmentService(db)
+	tracingConfigService := services.NewTracingConfigService(db)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -62,11 +63,12 @@ func main() {
 	replayHandler := handlers.NewReplayHandler(replayService)
 	mockHandler := handlers.NewMockHandler(mockService)
 	environmentHandler := handlers.NewEnvironmentHandler(environmentService)
+	tracingConfigHandler := handlers.NewTracingConfigHandler(tracingConfigService)
 
 	// Setup router
 	router := setupRouter(cfg, authService, authHandler, workspaceHandler, collectionHandler,
 		requestHandler, traceHandler, monitoringHandler, governanceHandler, settingsHandler,
-		replayHandler, mockHandler, environmentHandler)
+		replayHandler, mockHandler, environmentHandler, tracingConfigHandler)
 
 	// Create server
 	srv := &http.Server{
@@ -112,7 +114,8 @@ func setupRouter(cfg *config.Config, authService *services.AuthService,
 	settingsHandler *handlers.SettingsHandler,
 	replayHandler *handlers.ReplayHandler,
 	mockHandler *handlers.MockHandler,
-	environmentHandler *handlers.EnvironmentHandler) *gin.Engine {
+	environmentHandler *handlers.EnvironmentHandler,
+	tracingConfigHandler *handlers.TracingConfigHandler) *gin.Engine {
 
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -227,6 +230,19 @@ func setupRouter(cfg *config.Config, authService *services.AuthService,
 				workspaces.POST("/:workspace_id/environments/:environment_id/variables", environmentHandler.AddEnvironmentVariable)
 				workspaces.PUT("/:workspace_id/environments/:environment_id/variables/:variable_id", environmentHandler.UpdateEnvironmentVariable)
 				workspaces.DELETE("/:workspace_id/environments/:environment_id/variables/:variable_id", environmentHandler.DeleteEnvironmentVariable)
+
+				// ========== TRACING CONFIG ROUTES ==========
+				workspaces.GET("/:workspace_id/tracing/configs", tracingConfigHandler.GetAll)
+				workspaces.POST("/:workspace_id/tracing/configs", tracingConfigHandler.Create)
+				workspaces.GET("/:workspace_id/tracing/configs/:config_id", tracingConfigHandler.GetByID)
+				workspaces.PUT("/:workspace_id/tracing/configs/:config_id", tracingConfigHandler.Update)
+				workspaces.DELETE("/:workspace_id/tracing/configs/:config_id", tracingConfigHandler.Delete)
+				workspaces.POST("/:workspace_id/tracing/configs/:config_id/toggle", tracingConfigHandler.Toggle)
+				workspaces.POST("/:workspace_id/tracing/configs/bulk-toggle", tracingConfigHandler.BulkToggle)
+				workspaces.GET("/:workspace_id/tracing/services/:service_name", tracingConfigHandler.GetByServiceName)
+				workspaces.GET("/:workspace_id/tracing/enabled-services", tracingConfigHandler.GetEnabledServices)
+				workspaces.GET("/:workspace_id/tracing/disabled-services", tracingConfigHandler.GetDisabledServices)
+				workspaces.GET("/:workspace_id/tracing/check", tracingConfigHandler.CheckTracingEnabled)
 			}
 
 			// User settings routes
