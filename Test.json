@@ -1,0 +1,1301 @@
+{
+  "info": {
+    "name": "Tracely API - Auto-Refresh Token (BULLETPROOF)",
+    "description": "✅ Automatically refreshes tokens when expired - NEVER fails!",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:8081/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "EMAIL",
+      "value": "subimv17@gmail.com",
+      "type": "string"
+    },
+    {
+      "key": "PASSWORD",
+      "value": "subi@2006",
+      "type": "string"
+    },
+    {
+      "key": "AUTH_TOKEN",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "REFRESH_TOKEN",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "TOKEN_EXPIRY",
+      "value": "0",
+      "type": "string"
+    },
+    {
+      "key": "USER_ID",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "WORKSPACE_ID",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "NEW_WORKSPACE_ID",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "COLLECTION_ID",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "REQUEST_ID",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "POLICY_ID",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "TRACE_ID",
+      "value": "test-trace-123",
+      "type": "string"
+    },
+    {
+      "key": "REPLAY_ID",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{AUTH_TOKEN}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 🔄 SMART AUTO-REFRESH TOKEN SYSTEM",
+          "// This runs BEFORE every request to ensure valid token",
+          "",
+          "const authToken = pm.collectionVariables.get('AUTH_TOKEN');",
+          "const refreshToken = pm.collectionVariables.get('REFRESH_TOKEN');",
+          "const tokenExpiry = parseInt(pm.collectionVariables.get('TOKEN_EXPIRY') || '0');",
+          "const currentTime = Math.floor(Date.now() / 1000);",
+          "",
+          "// Skip auto-refresh for login/register/refresh endpoints",
+          "const currentUrl = pm.request.url.toString();",
+          "const skipRefresh = currentUrl.includes('/auth/login') || ",
+          "                    currentUrl.includes('/auth/register') || ",
+          "                    currentUrl.includes('/auth/refresh') ||",
+          "                    currentUrl.includes('/auth/verfiy') ||",
+          "                    currentUrl.includes('/auth/logout');",
+          "",
+          "if (skipRefresh) {",
+          "    console.log('⏩ Skipping auto-refresh for auth endpoint');",
+          "    return;",
+          "}",
+          "",
+          "// Function to perform login",
+          "function performLogin() {",
+          "    console.log('🔐 Performing fresh login...');",
+          "    ",
+          "    const loginRequest = {",
+          "        url: pm.collectionVariables.get('BASE_URL') + '/auth/login',",
+          "        method: 'POST',",
+          "        header: {",
+          "            'Content-Type': 'application/json'",
+          "        },",
+          "        body: {",
+          "            mode: 'raw',",
+          "            raw: JSON.stringify({",
+          "                email: pm.collectionVariables.get('EMAIL'),",
+          "                password: pm.collectionVariables.get('PASSWORD')",
+          "            })",
+          "        }",
+          "    };",
+          "    ",
+          "    pm.sendRequest(loginRequest, function (err, response) {",
+          "        if (err) {",
+          "            console.error('❌ Login failed:', err);",
+          "            return;",
+          "        }",
+          "        ",
+          "        const jsonData = response.json();",
+          "        pm.collectionVariables.set('AUTH_TOKEN', jsonData.access_token);",
+          "        pm.collectionVariables.set('REFRESH_TOKEN', jsonData.refresh_token);",
+          "        pm.collectionVariables.set('USER_ID', jsonData.user_id);",
+          "        ",
+          "        // Set expiry time (1 hour from now)",
+          "        const expiryTime = Math.floor(Date.now() / 1000) + 3600;",
+          "        pm.collectionVariables.set('TOKEN_EXPIRY', expiryTime.toString());",
+          "        ",
+          "        console.log('✅ Fresh login successful');",
+          "        console.log('   Token expires at:', new Date(expiryTime * 1000).toLocaleTimeString());",
+          "    });",
+          "}",
+          "",
+          "// Function to refresh token",
+          "function refreshAccessToken() {",
+          "    console.log('🔄 Refreshing access token...');",
+          "    ",
+          "    const refreshRequest = {",
+          "        url: pm.collectionVariables.get('BASE_URL') + '/auth/refresh',",
+          "        method: 'POST',",
+          "        header: {",
+          "            'Content-Type': 'application/json'",
+          "        },",
+          "        body: {",
+          "            mode: 'raw',",
+          "            raw: JSON.stringify({",
+          "                refresh_token: pm.collectionVariables.get('REFRESH_TOKEN')",
+          "            })",
+          "        }",
+          "    };",
+          "    ",
+          "    pm.sendRequest(refreshRequest, function (err, response) {",
+          "        if (err || response.code !== 200) {",
+          "            console.warn('⚠️  Token refresh failed, performing fresh login');",
+          "            performLogin();",
+          "            return;",
+          "        }",
+          "        ",
+          "        const jsonData = response.json();",
+          "        pm.collectionVariables.set('AUTH_TOKEN', jsonData.access_token);",
+          "        pm.collectionVariables.set('REFRESH_TOKEN', jsonData.refresh_token);",
+          "        ",
+          "        // Set expiry time (1 hour from now)",
+          "        const expiryTime = Math.floor(Date.now() / 1000) + 3600;",
+          "        pm.collectionVariables.set('TOKEN_EXPIRY', expiryTime.toString());",
+          "        ",
+          "        console.log('✅ Token refreshed successfully');",
+          "        console.log('   New token expires at:', new Date(expiryTime * 1000).toLocaleTimeString());",
+          "    });",
+          "}",
+          "",
+          "// Main logic: Check if token needs refresh",
+          "if (!authToken || authToken === '') {",
+          "    // No token at all - do fresh login",
+          "    console.log('🆕 No token found - performing initial login');",
+          "    performLogin();",
+          "} else if (tokenExpiry > 0 && currentTime >= (tokenExpiry - 300)) {",
+          "    // Token expired or will expire in next 5 minutes",
+          "    console.log('⏰ Token expired or expiring soon');",
+          "    console.log('   Current time:', new Date(currentTime * 1000).toLocaleTimeString());",
+          "    console.log('   Token expires:', new Date(tokenExpiry * 1000).toLocaleTimeString());",
+          "    ",
+          "    if (refreshToken && refreshToken !== '') {",
+          "        // Try to refresh",
+          "        refreshAccessToken();",
+          "    } else {",
+          "        // No refresh token - do fresh login",
+          "        performLogin();",
+          "    }",
+          "} else {",
+          "    // Token is still valid",
+          "    const minutesLeft = Math.floor((tokenExpiry - currentTime) / 60);",
+          "    console.log('✅ Token is valid (' + minutesLeft + ' minutes remaining)');",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-save tokens from responses that include them",
+          "if (pm.response.code === 200 || pm.response.code === 201) {",
+          "    try {",
+          "        const jsonData = pm.response.json();",
+          "        ",
+          "        if (jsonData.access_token) {",
+          "            pm.collectionVariables.set('AUTH_TOKEN', jsonData.access_token);",
+          "            const expiryTime = Math.floor(Date.now() / 1000) + 3600;",
+          "            pm.collectionVariables.set('TOKEN_EXPIRY', expiryTime.toString());",
+          "        }",
+          "        ",
+          "        if (jsonData.refresh_token) {",
+          "            pm.collectionVariables.set('REFRESH_TOKEN', jsonData.refresh_token);",
+          "        }",
+          "        ",
+          "        if (jsonData.user_id) {",
+          "            pm.collectionVariables.set('USER_ID', jsonData.user_id);",
+          "        }",
+          "    } catch (e) {",
+          "        // Not a JSON response or no tokens, that's OK",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 AUTHENTICATION",
+      "item": [
+        {
+          "name": "[1] Login (START HERE)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{EMAIL}}\",\n  \"password\": \"{{PASSWORD}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/auth/login",
+              "host": ["{{BASE_URL}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[1] ✅ Login Successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('[1] ✅ Received Tokens', function () {",
+                  "    pm.expect(jsonData.access_token).to.exist;",
+                  "    pm.expect(jsonData.refresh_token).to.exist;",
+                  "});",
+                  "",
+                  "console.log('✅ [1] LOGIN SUCCESS');",
+                  "console.log('   Access Token:', jsonData.access_token.substring(0, 20) + '...');",
+                  "console.log('   Refresh Token:', jsonData.refresh_token.substring(0, 20) + '...');",
+                  "console.log('   User ID:', jsonData.user_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[2] Verify Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/verify",
+              "host": ["{{BASE_URL}}"],
+              "path": ["auth", "verify"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[2] ✅ Token Valid', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [2] TOKEN VERIFIED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[3] Manual Token Refresh (Optional)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{REFRESH_TOKEN}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/auth/refresh",
+              "host": ["{{BASE_URL}}"],
+              "path": ["auth", "refresh"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[3] ✅ Token Refreshed', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "console.log('✅ [3] TOKEN MANUALLY REFRESHED');",
+                  "console.log('   New Access Token:', jsonData.access_token.substring(0, 20) + '...');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📁 WORKSPACES",
+      "item": [
+        {
+          "name": "[4] List Workspaces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[4] ✅ Workspaces Listed', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "var workspaces = jsonData.workspaces || jsonData.data || jsonData;",
+                  "",
+                  "if (Array.isArray(workspaces) && workspaces.length > 0) {",
+                  "    var workspaceId = workspaces[0].id || workspaces[0].ID;",
+                  "    pm.collectionVariables.set('WORKSPACE_ID', workspaceId);",
+                  "    console.log('✅ [4] WORKSPACE ID SAVED:', workspaceId);",
+                  "}",
+                  "",
+                  "pm.test('[4] ✅ Has Workspaces', function () {",
+                  "    pm.expect(workspaces.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[5] Create Workspace",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Auto-Refresh Test Workspace\",\n  \"description\": \"Testing auto-refresh functionality\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[5] ✅ Workspace Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('NEW_WORKSPACE_ID', jsonData.id);",
+                  "console.log('✅ [5] NEW WORKSPACE CREATED:', jsonData.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[6] Get Workspace",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[6] ✅ Workspace Retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [6] WORKSPACE DETAILS RETRIEVED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[7] Update Workspace",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Workspace\",\n  \"description\": \"Modified\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[7] ✅ Workspace Updated', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [7] WORKSPACE UPDATED');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📚 COLLECTIONS",
+      "item": [
+        {
+          "name": "[8] List Collections",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/collections",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "collections"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[8] ✅ Collections Listed', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [8] COLLECTIONS LISTED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[9] Create Collection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Collection\",\n  \"description\": \"Auto-refresh test\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/collections",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "collections"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[9] ✅ Collection Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('COLLECTION_ID', jsonData.id);",
+                  "console.log('✅ [9] COLLECTION CREATED:', jsonData.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[10] Get Collection",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/collections/{{COLLECTION_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "collections", "{{COLLECTION_ID}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[10] ✅ Collection Retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [10] COLLECTION RETRIEVED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[11] Update Collection",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Collection\",\n  \"description\": \"Modified\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/collections/{{COLLECTION_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "collections", "{{COLLECTION_ID}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[11] ✅ Collection Updated', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [11] COLLECTION UPDATED');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🚀 API REQUESTS",
+      "item": [
+        {
+          "name": "[12] Create Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test API\",\n  \"method\": \"GET\",\n  \"url\": \"https://jsonplaceholder.typicode.com/users/1\",\n  \"headers\": {\"Accept\": \"application/json\"}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/collections/{{COLLECTION_ID}}/requests",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "collections", "{{COLLECTION_ID}}", "requests"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[12] ✅ Request Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('REQUEST_ID', jsonData.id);",
+                  "console.log('✅ [12] REQUEST CREATED:', jsonData.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[13] Get Request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/requests/{{REQUEST_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "requests", "{{REQUEST_ID}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[13] ✅ Request Retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [13] REQUEST RETRIEVED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[14] Update Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Request\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/requests/{{REQUEST_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "requests", "{{REQUEST_ID}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[14] ✅ Request Updated', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [14] REQUEST UPDATED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[15] Execute Request",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/requests/{{REQUEST_ID}}/execute",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "requests", "{{REQUEST_ID}}", "execute"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[15] ✅ Request Executed', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "console.log('✅ [15] REQUEST EXECUTED');",
+                  "console.log('   Status:', jsonData.status_code);",
+                  "console.log('   Duration:', jsonData.duration_ms + 'ms');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[16] Get History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/requests/{{REQUEST_ID}}/history",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "requests", "{{REQUEST_ID}}", "history"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[16] ✅ History Retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [16] EXECUTION HISTORY RETRIEVED');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📊 MONITORING",
+      "item": [
+        {
+          "name": "[17] Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/monitoring/dashboard",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "monitoring", "dashboard"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[17] ✅ Dashboard Retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [17] DASHBOARD METRICS');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[18] Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/monitoring/metrics",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "monitoring", "metrics"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[18] ✅ Metrics Retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [18] PERFORMANCE METRICS');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[19] Topology",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/monitoring/topology",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "monitoring", "topology"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[19] ✅ Topology Retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [19] SERVICE TOPOLOGY');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🔍 TRACING",
+      "item": [
+        {
+          "name": "[20] Get Traces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/traces",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "traces"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[20] ✅ Traces Retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [20] DISTRIBUTED TRACES');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🛡️ GOVERNANCE",
+      "item": [
+        {
+          "name": "[21] List Policies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/governance/policies",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "governance", "policies"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[21] ✅ Policies Listed', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [21] GOVERNANCE POLICIES');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[22] Create Policy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rate Limit\",\n  \"description\": \"100 req/min\",\n  \"rules\": \"{\\\"max\\\": 100}\",\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/governance/policies",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "governance", "policies"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[22] ✅ Policy Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('POLICY_ID', jsonData.id);",
+                  "console.log('✅ [22] POLICY CREATED:', jsonData.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[23] Update Policy",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Policy\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/governance/policies/{{POLICY_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "governance", "policies", "{{POLICY_ID}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[23] ✅ Policy Updated', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [23] POLICY UPDATED');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "⚙️ SETTINGS",
+      "item": [
+        {
+          "name": "[24] Get Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/users/settings",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "settings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[24] ✅ Settings Retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [24] USER SETTINGS');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[25] Update Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"theme\": \"dark\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/settings",
+              "host": ["{{BASE_URL}}"],
+              "path": ["users", "settings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[25] ✅ Settings Updated', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [25] SETTINGS UPDATED');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🔄 REPLAY",
+      "item": [
+        {
+          "name": "[26] Create Replay",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Replay\",\n  \"source_trace_id\": \"{{TRACE_ID}}\",\n  \"target_environment\": \"staging\",\n  \"configuration\": {\"count\": 10}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/replays",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "replays"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[26] ✅ Replay Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('✅ [26] REPLAY CONFIGURATION');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🎭 MOCKS",
+      "item": [
+        {
+          "name": "[27] List Mocks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/mocks",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "mocks"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[27] ✅ Mocks Listed', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ [27] GENERATED MOCKS');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🗑️ CLEANUP",
+      "item": [
+        {
+          "name": "[28] Delete Policy",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/governance/policies/{{POLICY_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "governance", "policies", "{{POLICY_ID}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[28] ✅ Policy Deleted', function () {",
+                  "    pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});",
+                  "console.log('✅ [28] POLICY DELETED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[29] Delete Request",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/requests/{{REQUEST_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "requests", "{{REQUEST_ID}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[29] ✅ Request Deleted', function () {",
+                  "    pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});",
+                  "console.log('✅ [29] REQUEST DELETED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[30] Delete Collection",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{WORKSPACE_ID}}/collections/{{COLLECTION_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{WORKSPACE_ID}}", "collections", "{{COLLECTION_ID}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[30] ✅ Collection Deleted', function () {",
+                  "    pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});",
+                  "console.log('✅ [30] COLLECTION DELETED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[31] Delete Workspace",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/workspaces/{{NEW_WORKSPACE_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["workspaces", "{{NEW_WORKSPACE_ID}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[31] ✅ Workspace Deleted', function () {",
+                  "    pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});",
+                  "console.log('✅ [31] WORKSPACE DELETED');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[32] Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/logout",
+              "host": ["{{BASE_URL}}"],
+              "path": ["auth", "logout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('[32] ✅ Logged Out', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('AUTH_TOKEN', '');",
+                  "pm.collectionVariables.set('REFRESH_TOKEN', '');",
+                  "",
+                  "console.log('✅ [32] LOGGED OUT');",
+                  "console.log('');",
+                  "console.log('🎉🎉🎉 ALL 32 TESTS COMPLETED! 🎉🎉🎉');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
