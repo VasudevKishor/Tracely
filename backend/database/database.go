@@ -82,6 +82,7 @@ func RunMigrations(db *gorm.DB) error {
 		&models.Environment{},
 		&models.EnvironmentVariable{},
 		&models.EnvironmentSecret{},
+		&models.ServiceTracingConfig{},
 	)
 
 	if err != nil {
@@ -136,6 +137,11 @@ func createIndexes(db *gorm.DB) {
 	// Mock indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_mocks_workspace_id ON mocks(workspace_id);")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_mocks_enabled ON mocks(enabled);")
+
+	// Service tracing config indexes
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_service_tracing_configs_workspace_id ON service_tracing_configs(workspace_id);")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_service_tracing_configs_service_name ON service_tracing_configs(service_name);")
+	db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_service_tracing_configs_workspace_service ON service_tracing_configs(workspace_id, service_name) WHERE deleted_at IS NULL;")
 
 	log.Println("Database indexes created")
 }
