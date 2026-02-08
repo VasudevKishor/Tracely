@@ -277,3 +277,23 @@ type EnvironmentSecret struct {
 
 	Environment Environment `gorm:"foreignKey:EnvironmentID"`
 }
+
+type ServiceTracingConfig struct {
+	ID                  uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	WorkspaceID         uuid.UUID      `gorm:"type:uuid;not null" json:"workspace_id"`
+	Workspace           Workspace      `gorm:"foreignKey:WorkspaceID" json:"workspace,omitempty"`
+	ServiceName         string         `gorm:"not null" json:"service_name"`
+	Enabled             bool           `gorm:"default:true" json:"enabled"`
+	SamplingRate        float64        `gorm:"default:1.0" json:"sampling_rate"`
+	LogTraceHeaders     bool           `gorm:"default:true" json:"log_trace_headers"`
+	PropagateContext    bool           `gorm:"default:true" json:"propagate_context"`
+	CaptureRequestBody  bool           `gorm:"default:false" json:"capture_request_body"`
+	CaptureResponseBody bool           `gorm:"default:false" json:"capture_response_body"`
+	MaxBodySizeBytes    int            `gorm:"default:10240" json:"max_body_size_bytes"`
+	ExcludePaths        string         `gorm:"type:jsonb;default:'[]'" json:"exclude_paths"`
+	CustomTags          string         `gorm:"type:jsonb;default:'{}'" json:"custom_tags"`
+	Description         string         `gorm:"type:text" json:"description"`
+	CreatedAt           time.Time      `json:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"`
+	DeletedAt           gorm.DeletedAt `gorm:"index" json:"-"`
+}
