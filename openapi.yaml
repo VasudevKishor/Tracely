@@ -499,6 +499,371 @@ paths:
               schema:
                 $ref: "#/components/schemas/TraceDetail"
 
+  # ========== TRACING CONFIGURATION ENDPOINTS ==========
+  /api/v1/workspaces/{workspace_id}/tracing/configs:
+    get:
+      tags:
+        - Tracing Configuration
+      summary: Get all service tracing configurations
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of tracing configurations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ServiceTracingConfig"
+                  count:
+                    type: integer
+        "403":
+          description: Access denied
+
+    post:
+      tags:
+        - Tracing Configuration
+      summary: Create service tracing configuration
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTracingConfigRequest"
+      responses:
+        "201":
+          description: Configuration created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceTracingConfig"
+        "409":
+          description: Configuration already exists for service
+
+  /api/v1/workspaces/{workspace_id}/tracing/configs/{config_id}:
+    get:
+      tags:
+        - Tracing Configuration
+      summary: Get tracing configuration by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: config_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Tracing configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceTracingConfig"
+        "404":
+          description: Configuration not found
+
+    put:
+      tags:
+        - Tracing Configuration
+      summary: Update tracing configuration
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: config_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTracingConfigRequest"
+      responses:
+        "200":
+          description: Configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceTracingConfig"
+
+    delete:
+      tags:
+        - Tracing Configuration
+      summary: Delete tracing configuration
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: config_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Configuration deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/v1/workspaces/{workspace_id}/tracing/configs/{config_id}/toggle:
+    post:
+      tags:
+        - Tracing Configuration
+      summary: Toggle tracing for a service
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: config_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+              required:
+                - enabled
+      responses:
+        "200":
+          description: Tracing toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  config:
+                    $ref: "#/components/schemas/ServiceTracingConfig"
+
+  /api/v1/workspaces/{workspace_id}/tracing/configs/bulk-toggle:
+    post:
+      tags:
+        - Tracing Configuration
+      summary: Toggle tracing for multiple services
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                service_names:
+                  type: array
+                  items:
+                    type: string
+                enabled:
+                  type: boolean
+              required:
+                - service_names
+                - enabled
+      responses:
+        "200":
+          description: Bulk toggle successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  updated_count:
+                    type: integer
+
+  /api/v1/workspaces/{workspace_id}/tracing/services/{service_name}:
+    get:
+      tags:
+        - Tracing Configuration
+      summary: Get tracing configuration for a specific service
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: service_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Service tracing configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  config:
+                    $ref: "#/components/schemas/ServiceTracingConfig"
+                  is_default:
+                    type: boolean
+
+  /api/v1/workspaces/{workspace_id}/tracing/enabled-services:
+    get:
+      tags:
+        - Tracing Configuration
+      summary: Get list of services with tracing enabled
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of enabled services
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled_services:
+                    type: array
+                    items:
+                      type: string
+                  count:
+                    type: integer
+
+  /api/v1/workspaces/{workspace_id}/tracing/disabled-services:
+    get:
+      tags:
+        - Tracing Configuration
+      summary: Get list of services with tracing disabled
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of disabled services
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  disabled_services:
+                    type: array
+                    items:
+                      type: string
+                  count:
+                    type: integer
+
+  /api/v1/workspaces/{workspace_id}/tracing/check:
+    get:
+      tags:
+        - Tracing Configuration
+      summary: Check if tracing is enabled for a service
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: service_name
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tracing status for service
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service_name:
+                    type: string
+                  enabled:
+                    type: boolean
+                  should_sample:
+                    type: boolean
+
   /api/v1/workspaces/{workspace_id}/monitoring/dashboard:
     get:
       tags:
@@ -850,6 +1215,123 @@ components:
         preferences:
           type: object
 
+    ServiceTracingConfig:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        service_name:
+          type: string
+        enabled:
+          type: boolean
+        sampling_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Sampling rate between 0 and 1
+        log_trace_headers:
+          type: boolean
+          description: Whether to log trace headers
+        propagate_context:
+          type: boolean
+          description: Whether to propagate trace context to downstream services
+        capture_request_body:
+          type: boolean
+          description: Whether to capture request body in traces
+        capture_response_body:
+          type: boolean
+          description: Whether to capture response body in traces
+        max_body_size_bytes:
+          type: integer
+          description: Maximum body size to capture in bytes
+        exclude_paths:
+          type: array
+          items:
+            type: string
+          description: Paths to exclude from tracing
+        custom_tags:
+          type: object
+          description: Custom tags to add to all traces
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateTracingConfigRequest:
+      type: object
+      required:
+        - service_name
+      properties:
+        service_name:
+          type: string
+        enabled:
+          type: boolean
+          default: true
+        sampling_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 1.0
+        log_trace_headers:
+          type: boolean
+          default: true
+        propagate_context:
+          type: boolean
+          default: true
+        capture_request_body:
+          type: boolean
+          default: false
+        capture_response_body:
+          type: boolean
+          default: false
+        max_body_size_bytes:
+          type: integer
+          default: 10240
+        exclude_paths:
+          type: string
+          description: JSON array of paths to exclude
+          default: "[]"
+        custom_tags:
+          type: string
+          description: JSON object of custom tags
+          default: "{}"
+        description:
+          type: string
+
+    UpdateTracingConfigRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        sampling_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+        log_trace_headers:
+          type: boolean
+        propagate_context:
+          type: boolean
+        capture_request_body:
+          type: boolean
+        capture_response_body:
+          type: boolean
+        max_body_size_bytes:
+          type: integer
+        exclude_paths:
+          type: string
+        custom_tags:
+          type: string
+        description:
+          type: string
+
 tags:
   - name: Authentication
     description: User authentication endpoints
@@ -861,6 +1343,8 @@ tags:
     description: API request management and execution
   - name: Tracing
     description: Distributed tracing
+  - name: Tracing Configuration
+    description: Per-service tracing configuration
   - name: Monitoring
     description: Monitoring and dashboards
   - name: Governance
