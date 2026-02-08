@@ -233,8 +233,6 @@ type RefreshToken struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-// models/models.go - Add these models
-
 type Environment struct {
 	ID          uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
 	WorkspaceID uuid.UUID `gorm:"type:uuid;not null"`
@@ -285,14 +283,14 @@ type ServiceTracingConfig struct {
 	Workspace           Workspace      `gorm:"foreignKey:WorkspaceID" json:"workspace,omitempty"`
 	ServiceName         string         `gorm:"type:varchar(255);not null" json:"service_name"`
 	Enabled             bool           `gorm:"default:true" json:"enabled"`
-	SamplingRate        float64        `gorm:"default:1.0" json:"sampling_rate"`           // 0.0 to 1.0
-	LogTraceHeaders     bool           `gorm:"default:true" json:"log_trace_headers"`      // Whether to log trace headers
-	PropagateContext    bool           `gorm:"default:true" json:"propagate_context"`      // Whether to propagate trace context
-	CaptureRequestBody  bool           `gorm:"default:false" json:"capture_request_body"`  // Whether to capture request body
-	CaptureResponseBody bool           `gorm:"default:false" json:"capture_response_body"` // Whether to capture response body
-	MaxBodySizeBytes    int            `gorm:"default:10240" json:"max_body_size_bytes"`   // Max body size to capture (10KB default)
-	ExcludePaths        string         `gorm:"type:jsonb;default:'[]'" json:"exclude_paths"` // JSON array of paths to exclude from tracing
-	CustomTags          string         `gorm:"type:jsonb;default:'{}'" json:"custom_tags"`   // JSON object of custom tags to add
+	SamplingRate        float64        `gorm:"default:1.0" json:"sampling_rate"`            // 0.0 to 1.0
+	LogTraceHeaders     bool           `gorm:"default:true" json:"log_trace_headers"`       // Whether to log trace headers
+	PropagateContext    bool           `gorm:"default:true" json:"propagate_context"`       // Whether to propagate trace context
+	CaptureRequestBody  bool           `gorm:"default:false" json:"capture_request_body"`   // Whether to capture request body
+	CaptureResponseBody bool           `gorm:"default:false" json:"capture_response_body"`  // Whether to capture response body
+	MaxBodySizeBytes    int            `gorm:"default:10240" json:"max_body_size_bytes"`    // Max body size to capture (10KB default)
+	ExcludePaths        string         `gorm:"type:jsonb;default:'[]'" json:"exclude_paths"` // JSON array of paths to exclude
+	CustomTags          string         `gorm:"type:jsonb;default:'{}'" json:"custom_tags"`   // JSON object of custom tags
 	Description         string         `gorm:"type:text" json:"description"`
 	CreatedAt           time.Time      `json:"created_at"`
 	UpdatedAt           time.Time      `json:"updated_at"`

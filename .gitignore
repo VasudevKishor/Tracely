@@ -52,3 +52,6 @@ backend/NEW_FEATURES.md
 backend/QUICK_START.md
 backend/setup_backend.sh
 backend/test_api.sh
+frontend_1/lib/screens/request_studio_screen.dart
+POSTMAN_LOGIN_COLLECTION.json
+Test.json
