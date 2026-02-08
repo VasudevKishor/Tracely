@@ -442,5 +442,288 @@ class ApiService {
     );
   }
 
-  
+// ==================== ENVIRONMENT ENDPOINTS ====================
+
+  Future<List<dynamic>> getEnvironments(String workspaceId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/environments'),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    return data['environments'] ?? data['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> createEnvironment(
+    String workspaceId,
+    String name,
+    String type,
+    {String? description, bool isActive = true}
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/environments'),
+      headers: await _getHeaders(),
+      body: json.encode({
+        'name': name,
+        'type': type,
+        if (description != null) 'description': description,
+        'is_active': isActive,
+      }),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getEnvironmentVariables(String workspaceId, String environmentId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/environments/$environmentId'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> updateEnvironment(
+    String workspaceId,
+    String environmentId,
+    Map<String, dynamic> updates,
+  ) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/environments/$environmentId'),
+      headers: await _getHeaders(),
+      body: json.encode(updates),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<void> deleteEnvironment(String workspaceId, String environmentId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/environments/$environmentId'),
+      headers: await _getHeaders(),
+    );
+    await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> addEnvironmentVariable(
+    String workspaceId,
+    String environmentId,
+    String key,
+    String value,
+    String type,
+    {String? description}
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/environments/$environmentId/variables'),
+      headers: await _getHeaders(),
+      body: json.encode({
+        'key': key,
+        'value': value,
+        'type': type,
+        if (description != null) 'description': description,
+      }),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> updateEnvironmentVariable(
+    String workspaceId,
+    String environmentId,
+    String variableId,
+    Map<String, dynamic> updates,
+  ) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/environments/$environmentId/variables/$variableId'),
+      headers: await _getHeaders(),
+      body: json.encode(updates),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<void> deleteEnvironmentVariable(
+    String workspaceId,
+    String environmentId,
+    String variableId,
+  ) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/environments/$environmentId/variables/$variableId'),
+      headers: await _getHeaders(),
+    );
+    await _handleResponse(response);
+  }
+
+// ==================== TRACING CONFIG ENDPOINTS ====================
+
+  Future<List<dynamic>> getTracingConfigs(String workspaceId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/tracing/configs'),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    return data['configs'] ?? data['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> createTracingConfig(
+    String workspaceId,
+    Map<String, dynamic> configData,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/tracing/configs'),
+      headers: await _getHeaders(),
+      body: json.encode(configData),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getTracingConfig(String workspaceId, String configId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/tracing/configs/$configId'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> updateTracingConfig(
+    String workspaceId,
+    String configId,
+    Map<String, dynamic> updates,
+  ) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/tracing/configs/$configId'),
+      headers: await _getHeaders(),
+      body: json.encode(updates),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<void> deleteTracingConfig(String workspaceId, String configId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/tracing/configs/$configId'),
+      headers: await _getHeaders(),
+    );
+    await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> toggleTracingConfig(String workspaceId, String configId, bool enabled) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/tracing/configs/$configId/toggle'),
+      headers: await _getHeaders(),
+      body: json.encode({'enabled': enabled}),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> bulkToggleTracingConfigs(
+    String workspaceId,
+    List<String> serviceNames,
+    bool enabled,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/tracing/configs/bulk-toggle'),
+      headers: await _getHeaders(),
+      body: json.encode({
+        'service_names': serviceNames,
+        'enabled': enabled,
+      }),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<List<dynamic>> getEnabledTracingServices(String workspaceId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/tracing/enabled-services'),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    return data['enabled_services'] ?? [];
+  }
+
+  Future<List<dynamic>> getDisabledTracingServices(String workspaceId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/tracing/disabled-services'),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    return data['disabled_services'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> checkTracingEnabled(String workspaceId, String serviceName) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/tracing/check?service_name=$serviceName'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getTracingConfigByService(String workspaceId, String serviceName) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/tracing/services/$serviceName'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+// ==================== AUTO TRACING CONFIG ENDPOINTS ====================
+
+  Future<List<dynamic>> getAutoTracingConfigs(String workspaceId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/auto-tracing/configs'),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    return data['configs'] ?? data['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> createAutoTracingConfig(
+    String workspaceId,
+    Map<String, dynamic> configData,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/auto-tracing/configs'),
+      headers: await _getHeaders(),
+      body: json.encode(configData),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getAutoTracingConfig(String workspaceId, String configId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/auto-tracing/configs/$configId'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> updateAutoTracingConfig(
+    String workspaceId,
+    String configId,
+    Map<String, dynamic> updates,
+  ) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/auto-tracing/configs/$configId'),
+      headers: await _getHeaders(),
+      body: json.encode(updates),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<void> deleteAutoTracingConfig(String workspaceId, String configId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/auto-tracing/configs/$configId'),
+      headers: await _getHeaders(),
+    );
+    await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> checkAutoTracingEnabled(String workspaceId, String serviceName) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/auto-tracing/check?service_name=$serviceName'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getAutoTracingConfigByService(String workspaceId, String serviceName) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/workspaces/$workspaceId/auto-tracing/services/$serviceName'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
 }
