@@ -1,9 +1,15 @@
-# Miscellaneous
+# ========================
+# Common / Miscellaneous
+# ========================
 *.class
 *.log
 *.pyc
 *.swp
+*.swo
+*~
 .DS_Store
+Thumbs.db
+
 .atom/
 .build/
 .buildlog/
@@ -11,35 +17,91 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+tmp/
+temp/
 
-# IntelliJ related
+# ========================
+# IDE / Editor
+# ========================
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# VS Code (keep commented if you want to commit configs)
 #.vscode/
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# ========================
+# Flutter / Dart
+# ========================
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
-/coverage/
+build/
+coverage/
+**/doc/api/
+**/ios/Flutter/.last_build_id
 
-# Symbolication related
+# Symbolication / Obfuscation
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# ========================
+# Android
+# ========================
+android/app/debug
+android/app/profile
+android/app/release
+
+# ========================
+# Node / Frontend tooling
+# ========================
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+dist/
+
+# ========================
+# Native / Binary outputs
+# ========================
+*.o
+*.a
+*.so
+
+# ========================
+# Environment files
+# ========================
+.env
+.env.local
+.env.*.local
+
+# ========================
+# Logs
+# ========================
+logs/
+npm-debug.log*
+
+# ========================
+# Testing
+# ========================
+.nyc_output/
+
+# ========================
+# Project Docs (do not commit)
+# ========================
+FINAL_DELIVERY_SUMMARY.md
+FRONTEND_BACKEND_ANALYSIS.md
+INTEGRATION_GUIDE.md
+backend/COMPLETE.md
+backend/NEW_FEATURES.md
+backend/QUICK_START.md
+backend/setup_backend.sh
+backend/test_api.sh
+
+# ========================
+# OS
+# ========================
+.DS_Store

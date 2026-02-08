@@ -1,8 +1,24 @@
 # Tracely
 
+**Tracely** is a unified platform for **API debugging, distributed tracing, and scenario automation**, with a modern **Flutter mobile frontend** and a powerful backend observability engine.
+
+It goes **beyond Postman / Hoppscotch** by capturing real traffic, generating zero-code tests, replaying scenarios, and visualizing distributed traces.
+
+---
+
+## 🚀 Overview
+
+- 📱 **Flutter mobile app** for monitoring, debugging, and quick actions
+- 🧠 **Backend observability platform** for traffic capture, mocking, replay, and tracing
+- ⚙️ Designed for **developers, QA engineers, and DevOps**
+
+---
+
+## 📱 Flutter Mobile App
+
 A beautiful Flutter mobile app for API debugging, distributed tracing, and scenario automation.
 
-## Features
+### Features
 
 - **Material 3** design with dark mode (default) and light mode
 - **Authentication** – Login, OTP verification, logout confirmation
@@ -14,66 +30,107 @@ A beautiful Flutter mobile app for API debugging, distributed tracing, and scena
 - **Logs** – Severity-filtered log viewer
 - **Settings** – Theme toggle, notifications, account, logout
 
-## Getting Started
+---
+
+## 📂 Mobile App Structure
+frontend_1/lib/
+├── main.dart
+├── providers/
+│ ├── auth_provider.dart
+│ ├── trace_provider.dart
+│ └── workspace_provider.dart
+├── screens/
+│ ├── auth/
+│ ├── home/
+│ ├── alerts/
+│ ├── traces/
+│ ├── tests/
+│ ├── logs/
+│ └── settings/
+├── services/
+│ └── api_service.dart
+└── widgets/
+
+---
+
+## 🧠 Backend Platform (SRS Summary)
+
+### Purpose
+The backend platform provides **automated API observability and testing**, eliminating manual scripting and enabling real-world regression testing.
+
+### Core Capabilities
+
+- **Traffic Capture** – HTTP/gRPC interception
+- **Automated Test Generation** – YAML/JSON from live traffic
+- **Dependency Mocking** – Databases & external APIs
+- **Distributed Tracing** – Span-level latency visualization
+- **Replay Engine** – Regression testing without manual setup
+
+---
+
+## 🧩 System Features
+
+### Traffic Capture
+- Records request/response, headers, body, timestamps
+- Supports filtering noisy endpoints
+
+### Automation
+- Zero-code test generation
+- Noise filtering for dynamic fields (UUIDs, timestamps)
+
+### Tracing
+- End-to-end request visualization
+- Log + trace correlation
+
+---
+
+## 👥 Target Users
+
+- **Backend Developers** – Debug and replay failures
+- **QA Engineers** – Regression from real traffic
+- **DevOps Engineers** – Monitoring, latency, alerts
+
+---
+
+## 🛠️ Getting Started (Flutter)
 
 ### Prerequisites
-
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.5+)
-- Dart 3.5+
+- Flutter SDK **3.5+**
+- Dart **3.5+**
 
 ### Setup
 
-1. Ensure Flutter is installed and in your PATH:
-   ```bash
-   flutter doctor
-   ```
+```bash
+flutter doctor
+flutter pub get
+flutter run
+Targets:
 
-2. Add platform files (if not present):
-   ```bash
-   flutter create . --org com.tracely --project-name tracely
-   ```
+Android
 
-3. Install dependencies:
-   ```bash
-   flutter pub get
-   ```
+iOS
 
-4. Run the app:
-   ```bash
-   flutter run
-   ```
+Web (Chrome / Edge)
+backend/        # Observability & automation backend
+frontend_1/     # Flutter mobile & desktop app
+openapi.yaml
+📄 Documentation
 
-### Targets
+Backend setup & deployment guides in backend/
 
-- **iOS**: `flutter run -d ios`
-- **Android**: `flutter run -d android`
-- **Web**: `flutter run -d chrome`
+API specifications in openapi.yaml
 
-## Project Structure
+Flutter UI code in frontend_1/
+📌 Project Status
 
-```
-lib/
-├── main.dart              # App entry point
-├── app.dart               # Main shell with bottom navigation
-├── core/
-│   ├── theme/             # Light & dark themes
-│   ├── providers/         # Theme, app state
-│   └── widgets/           # Shared components
-└── screens/
-    ├── auth/              # Login, OTP
-    ├── home/              # Dashboard
-    ├── alerts/            # Alerts list
-    ├── traces/            # Traces, details, timeline
-    ├── tests/             # Test runs, details
-    ├── logs/              # Logs viewer
-    └── settings/          # Settings, logout
-```
+Backend: 🚧 In progress
 
-## UI Components
+Flutter frontend: 🚧 Active development
 
-- Toast notifications
-- Loading skeletons
-- Error banners
-- Empty states
-- Confirmation dialogs
-- Bottom navigation (Home, Alerts, Traces, Tests, Settings)
+CI/CD: ⏳ Planned
+Build a developer-first observability and automation platform that replaces manual API testing with real traffic intelligence.
+
+---
+
+
+
