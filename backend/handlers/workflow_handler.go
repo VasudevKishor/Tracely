@@ -9,20 +9,24 @@ import (
 	"github.com/google/uuid"
 )
 
+// WorkflowHandler handles HTTP requests related to workflows.
 type WorkflowHandler struct {
 	workflowService *services.WorkflowService
 }
 
+// NewWorkflowHandler creates a new instance of WorkflowHandler.
 func NewWorkflowHandler(workflowService *services.WorkflowService) *WorkflowHandler {
 	return &WorkflowHandler{workflowService: workflowService}
 }
 
+// CreateWorkflowRequest defines the payload for creating a new workflow.
 type CreateWorkflowRequest struct {
 	Name        string                  `json:"name" binding:"required"`
 	Description string                  `json:"description"`
 	Steps       []services.WorkflowStep `json:"steps" binding:"required"`
 }
 
+// Create handles the creation of a new workflow in a workspace.
 func (h *WorkflowHandler) Create(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, _ := uuid.Parse(c.Param("workspace_id"))
@@ -45,6 +49,7 @@ func (h *WorkflowHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, workflow)
 }
 
+// Execute triggers the execution of an existing workflow.
 func (h *WorkflowHandler) Execute(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	workflowID, _ := uuid.Parse(c.Param("workflow_id"))

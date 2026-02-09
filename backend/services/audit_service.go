@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// AuditLog represents an entry in the audit trail for workspace actions.
 type AuditLog struct {
 	ID           uuid.UUID `gorm:"type:uuid;primary_key"`
 	WorkspaceID  uuid.UUID `gorm:"type:uuid;not null"`
@@ -23,15 +24,17 @@ type AuditLog struct {
 	CreatedAt    time.Time
 }
 
+// AuditService provides business logic for recording and analyzing audit logs.
 type AuditService struct {
 	db *gorm.DB
 }
 
+// NewAuditService creates a new instance of AuditService.
 func NewAuditService(db *gorm.DB) *AuditService {
 	return &AuditService{db: db}
 }
 
-// Log creates an audit log entry
+// Log creates a new audit log entry in the database.
 func (s *AuditService) Log(workspaceID, userID, resourceID uuid.UUID, action, resourceType, ipAddress, userAgent string, changes map[string]interface{}, success bool, errorMsg string) error {
 	changesJSON, _ := json.Marshal(changes)
 
@@ -52,7 +55,7 @@ func (s *AuditService) Log(workspaceID, userID, resourceID uuid.UUID, action, re
 	return s.db.Create(&log).Error
 }
 
-// GetLogs retrieves audit logs with filters
+// GetLogs retrieves audit logs for a workspace with optional filters and pagination.
 func (s *AuditService) GetLogs(workspaceID uuid.UUID, filters map[string]interface{}, limit, offset int) ([]AuditLog, error) {
 	var logs []AuditLog
 	query := s.db.Where("workspace_id = ?", workspaceID)
@@ -71,11 +74,11 @@ func (s *AuditService) GetLogs(workspaceID uuid.UUID, filters map[string]interfa
 	return logs, err
 }
 
-// DetectAnomalies detects unusual access patterns
+// DetectAnomalies analyzes audit logs for a user to identify suspicious activity patterns.
 func (s *AuditService) DetectAnomalies(workspaceID, userID uuid.UUID) ([]string, error) {
 	anomalies := []string{}
 
-	// Check for rapid successive actions
+	// Check for rapid successive actions (e.g., potential automated abuse)
 	var count int64
 	s.db.Model(&AuditLog{}).
 		Where("workspace_id = ? AND user_id = ? AND created_at > ?", workspaceID, userID, time.Now().Add(-5*time.Minute)).
@@ -85,7 +88,7 @@ func (s *AuditService) DetectAnomalies(workspaceID, userID uuid.UUID) ([]string,
 		anomalies = append(anomalies, "Unusually high activity (100+ actions in 5 minutes)")
 	}
 
-	// Check for access from multiple IPs
+	// Check for access from multiple IPs in a short window (e.g., potential session hijacking or shared accounts)
 	var ips []string
 	s.db.Model(&AuditLog{}).
 		Where("workspace_id = ? AND user_id = ? AND created_at > ?", workspaceID, userID, time.Now().Add(-1*time.Hour)).
@@ -96,7 +99,7 @@ func (s *AuditService) DetectAnomalies(workspaceID, userID uuid.UUID) ([]string,
 		anomalies = append(anomalies, "Access from multiple IP addresses (5+ IPs in 1 hour)")
 	}
 
-	// Check for failed actions
+	// Check for a high frequency of failed actions (e.g., potential brute force or misconfiguration)
 	var failedCount int64
 	s.db.Model(&AuditLog{}).
 		Where("workspace_id = ? AND user_id = ? AND success = false AND created_at > ?", workspaceID, userID, time.Now().Add(-10*time.Minute)).

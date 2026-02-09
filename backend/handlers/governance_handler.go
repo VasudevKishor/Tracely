@@ -1,22 +1,25 @@
 package handlers
 
 import (
-	"net/http"
 	"backend/middlewares"
 	"backend/services"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
+// GovernanceHandler handles HTTP requests related to governance policies.
 type GovernanceHandler struct {
 	governanceService *services.GovernanceService
 }
 
+// NewGovernanceHandler creates a new instance of GovernanceHandler.
 func NewGovernanceHandler(governanceService *services.GovernanceService) *GovernanceHandler {
 	return &GovernanceHandler{governanceService: governanceService}
 }
 
+// CreatePolicyRequest defines the payload for creating a new governance policy.
 type CreatePolicyRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
@@ -24,6 +27,7 @@ type CreatePolicyRequest struct {
 	Enabled     bool   `json:"enabled"`
 }
 
+// GetPolicies retrieves all policies for a given workspace.
 func (h *GovernanceHandler) GetPolicies(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
@@ -41,6 +45,7 @@ func (h *GovernanceHandler) GetPolicies(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"policies": policies})
 }
 
+// CreatePolicy creates a new governance policy in a workspace.
 func (h *GovernanceHandler) CreatePolicy(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
@@ -64,6 +69,7 @@ func (h *GovernanceHandler) CreatePolicy(c *gin.Context) {
 	c.JSON(http.StatusCreated, policy)
 }
 
+// UpdatePolicy updates an existing governance policy.
 func (h *GovernanceHandler) UpdatePolicy(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	policyID, err := uuid.Parse(c.Param("policy_id"))
@@ -87,6 +93,7 @@ func (h *GovernanceHandler) UpdatePolicy(c *gin.Context) {
 	c.JSON(http.StatusOK, policy)
 }
 
+// DeletePolicy deletes a governance policy.
 func (h *GovernanceHandler) DeletePolicy(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	policyID, err := uuid.Parse(c.Param("policy_id"))

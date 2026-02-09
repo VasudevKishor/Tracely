@@ -9,14 +9,17 @@ import (
 	"github.com/google/uuid"
 )
 
+// EnvironmentHandler handles HTTP requests related to workspace environments.
 type EnvironmentHandler struct {
 	environmentService *services.EnvironmentService
 }
 
+// NewEnvironmentHandler creates a new instance of EnvironmentHandler.
 func NewEnvironmentHandler(environmentService *services.EnvironmentService) *EnvironmentHandler {
 	return &EnvironmentHandler{environmentService: environmentService}
 }
 
+// CreateEnvironmentRequest defines the payload for creating a new environment.
 type CreateEnvironmentRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Type        string `json:"type" binding:"required"`
@@ -24,6 +27,7 @@ type CreateEnvironmentRequest struct {
 	IsActive    bool   `json:"is_active"`
 }
 
+// UpdateEnvironmentRequest defines the payload for updating an existing environment.
 type UpdateEnvironmentRequest struct {
 	Name        string `json:"name"`
 	Type        string `json:"type"`
@@ -31,6 +35,7 @@ type UpdateEnvironmentRequest struct {
 	IsActive    *bool  `json:"is_active"`
 }
 
+// CreateEnvironmentVariableRequest defines the payload for adding or updating an environment variable.
 type CreateEnvironmentVariableRequest struct {
 	Key         string `json:"key" binding:"required"`
 	Value       string `json:"value" binding:"required"`

@@ -8,14 +8,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// WorkspaceService provides business logic for managing workspaces and their members.
 type WorkspaceService struct {
 	db *gorm.DB
 }
 
+// NewWorkspaceService creates a new instance of WorkspaceService.
 func NewWorkspaceService(db *gorm.DB) *WorkspaceService {
 	return &WorkspaceService{db: db}
 }
 
+// Create creates a new workspace and assigns the owner as an admin member.
 func (s *WorkspaceService) Create(name, description string, ownerID uuid.UUID) (*models.Workspace, error) {
 	workspace := models.Workspace{
 		Name:        name,
@@ -47,6 +50,7 @@ func (s *WorkspaceService) Create(name, description string, ownerID uuid.UUID) (
 	return &workspace, nil
 }
 
+// GetAll returns all workspaces where the given user is a member.
 func (s *WorkspaceService) GetAll(userID uuid.UUID) ([]models.Workspace, error) {
 	var workspaces []models.Workspace
 
@@ -62,6 +66,7 @@ func (s *WorkspaceService) GetAll(userID uuid.UUID) ([]models.Workspace, error) 
 	return workspaces, err
 }
 
+// GetByID retrieves a workspace by ID, checking if the user has access.
 func (s *WorkspaceService) GetByID(workspaceID, userID uuid.UUID) (*models.Workspace, error) {
 	var workspace models.Workspace
 	if err := s.db.First(&workspace, workspaceID).Error; err != nil {
@@ -85,6 +90,7 @@ func (s *WorkspaceService) GetByID(workspaceID, userID uuid.UUID) (*models.Works
 	return &workspace, nil
 }
 
+// Update updates the metadata of an existing workspace, checking for admin permissions.
 func (s *WorkspaceService) Update(workspaceID, userID uuid.UUID, name, description string) (*models.Workspace, error) {
 	var workspace models.Workspace
 
@@ -107,6 +113,7 @@ func (s *WorkspaceService) Update(workspaceID, userID uuid.UUID, name, descripti
 	return &workspace, nil
 }
 
+// Delete removes a workspace from the database, checking if the user is the owner.
 func (s *WorkspaceService) Delete(workspaceID, userID uuid.UUID) error {
 	// Check if user is owner
 	var workspace models.Workspace
@@ -121,6 +128,7 @@ func (s *WorkspaceService) Delete(workspaceID, userID uuid.UUID) error {
 	return s.db.Delete(&workspace).Error
 }
 
+// HasAccess checks if a user is a member of the specified workspace.
 func (s *WorkspaceService) HasAccess(workspaceID, userID uuid.UUID) bool {
 	var count int64
 	s.db.Model(&models.WorkspaceMember{}).
@@ -129,6 +137,7 @@ func (s *WorkspaceService) HasAccess(workspaceID, userID uuid.UUID) bool {
 	return count > 0
 }
 
+// IsAdmin checks if a user has the 'admin' role in the specified workspace.
 func (s *WorkspaceService) IsAdmin(workspaceID, userID uuid.UUID) bool {
 	var count int64
 	s.db.Model(&models.WorkspaceMember{}).
@@ -137,6 +146,7 @@ func (s *WorkspaceService) IsAdmin(workspaceID, userID uuid.UUID) bool {
 	return count > 0
 }
 
+// AddMember adds a new user to a workspace with a specific role, checking for admin permissions.
 func (s *WorkspaceService) AddMember(workspaceID, userID, memberUserID uuid.UUID, role string) error {
 	if !s.IsAdmin(workspaceID, userID) {
 		return errors.New("permission denied")
@@ -151,6 +161,7 @@ func (s *WorkspaceService) AddMember(workspaceID, userID, memberUserID uuid.UUID
 	return s.db.Create(&member).Error
 }
 
+// RemoveMember removes a user from a workspace, checking for admin permissions.
 func (s *WorkspaceService) RemoveMember(workspaceID, userID, memberUserID uuid.UUID) error {
 	if !s.IsAdmin(workspaceID, userID) {
 		return errors.New("permission denied")

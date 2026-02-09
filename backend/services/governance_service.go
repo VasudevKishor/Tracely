@@ -1,18 +1,20 @@
 package services
 
 import (
-	"errors"
 	"backend/models"
+	"errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
+// GovernanceService provides business logic for managing governance policies.
 type GovernanceService struct {
 	db               *gorm.DB
 	workspaceService *WorkspaceService
 }
 
+// NewGovernanceService creates a new instance of GovernanceService.
 func NewGovernanceService(db *gorm.DB) *GovernanceService {
 	return &GovernanceService{
 		db:               db,
@@ -20,6 +22,7 @@ func NewGovernanceService(db *gorm.DB) *GovernanceService {
 	}
 }
 
+// GetPolicies returns all policies for the given workspace, checking user access.
 func (s *GovernanceService) GetPolicies(workspaceID, userID uuid.UUID) ([]models.Policy, error) {
 	if !s.workspaceService.HasAccess(workspaceID, userID) {
 		return nil, errors.New("access denied")
@@ -30,6 +33,7 @@ func (s *GovernanceService) GetPolicies(workspaceID, userID uuid.UUID) ([]models
 	return policies, err
 }
 
+// CreatePolicy creates a new policy in the database after verifying admin permissions.
 func (s *GovernanceService) CreatePolicy(workspaceID, userID uuid.UUID, name, description, rules string, enabled bool) (*models.Policy, error) {
 	if !s.workspaceService.IsAdmin(workspaceID, userID) {
 		return nil, errors.New("permission denied")
@@ -50,6 +54,7 @@ func (s *GovernanceService) CreatePolicy(workspaceID, userID uuid.UUID, name, de
 	return &policy, nil
 }
 
+// UpdatePolicy updates an existing policy with the provided fields.
 func (s *GovernanceService) UpdatePolicy(policyID, userID uuid.UUID, updates map[string]interface{}) (*models.Policy, error) {
 	var policy models.Policy
 	if err := s.db.First(&policy, policyID).Error; err != nil {
@@ -67,6 +72,7 @@ func (s *GovernanceService) UpdatePolicy(policyID, userID uuid.UUID, updates map
 	return &policy, nil
 }
 
+// DeletePolicy removes a policy from the database after verifying admin permissions.
 func (s *GovernanceService) DeletePolicy(policyID, userID uuid.UUID) error {
 	var policy models.Policy
 	if err := s.db.First(&policy, policyID).Error; err != nil {
