@@ -7,18 +7,26 @@ Status: Updated Draft
 
 Date: 2024-12-09
 
-1. Introduction
+**1. Introduction**
+
+   
 1.1 Purpose
+
+
 The purpose of this document is to define the requirements for the Unified API Debugging, Distributed Tracing, and Scenario Automation Platform. This platform is designed to provide a comprehensive solution for API testing, observability, and automation, built on a Go backend with GORM for database interactions and a Flutter frontend for cross-platform user interfaces. It enables developers to debug APIs, visualize distributed traces, automate testing, and manage scenarios through a web-based dashboard and mobile app.
 
 1.2 Scope
+
+
 The system functions as a full-stack application with:
 
 Backend (Go): Handles authentication, workspace management, API request execution, distributed tracing, mocking, replay, and integrations.
 Frontend (Flutter): Provides a user interface for authentication, workspace setup, request building, tracing visualization, and automation controls.
 Core Features: JWT-based authentication, multi-tenant workspaces, request collections, real-time tracing, automated test generation, dependency mocking, and scenario replay.
 Integrations: Supports third-party tools like Slack, PagerDuty, Prometheus, and CI/CD pipelines.
-Out of Scope: Direct eBPF integration (though tracing middleware supports non-intrusive monitoring); full Kubernetes-native deployment (Docker Compose provided).
+Out of Scope: Direct eBPF integration (though tracing middleware supports non-intrusive monitoring); full Kubernetes-native deployment (Docker Compose provided).<br>
+
+
 1.3 Definitions and Acronyms
 | Term | Definition |
 | :--- | :--- |
@@ -30,21 +38,31 @@ Out of Scope: Direct eBPF integration (though tracing middleware supports non-in
 | Replay | Re-executing captured requests for testing or debugging |
 | Mock | Simulated responses for dependencies (e.g., databases, external APIs) |
 
-2. Overall Description
+**2. Overall Description**
+
+   
 2.1 Product Perspective
 This platform integrates into the SDLC as a centralized tool for API observability and automation. The Go backend manages data persistence with PostgreSQL (via GORM), while the Flutter frontend offers responsive screens for user interaction. It captures real-world API traffic, generates tests, and provides tracing without requiring code changes in target applications.
+
+
 
 2.2 User Classes and Characteristics
 Backend Developer: Uses the platform to build and test APIs, view traces, and debug issues via the Flutter app or web dashboard.
 QA Engineer: Leverages replay and test generation features for regression testing.
 DevOps Engineer: Configures tracing, monitors performance, and sets up integrations.
 All Users: Require basic technical knowledge; the Flutter UI simplifies interactions.
+
+
 2.3 Operating Environment
 Backend: Go 1.x, PostgreSQL database, Docker for containerization.
 Frontend: Flutter (Dart), supports iOS, Android, and web.
 Deployment: Docker Compose for local setup; Kubernetes for production.
 External Dependencies: Integrations with Slack, PagerDuty, Prometheus, CloudWatch.
-3. System Features (Functional Requirements)
+
+
+**3. System Features (Functional Requirements)**
+
+
 3.1 Authentication & Security
 Description: Secure user access with JWT and RBAC.
 
@@ -94,23 +112,38 @@ Description: Enterprise integrations and automation.
 | FR-18 | The system shall manage secrets, workflows, and CI/CD integrations (Slack, PagerDuty, Prometheus). | Medium |
 | FR-19 | The system shall support GraphQL queries and gRPC interceptors. | Low |
 
-4. Non-Functional Requirements
+**4. Non-Functional Requirements**
+
+   
 4.1 Performance
 Latency Overhead: Tracing middleware must add no more than 10ms latency.
 Throughput: Handle 1,000 requests/second per instance.
+
+
 4.2 Security & Privacy
 Data Sanitization: Automatic PII masking in logs and responses.
 Access Control: JWT-based auth with RBAC for workspace access.
+
+
 4.3 Scalability
 Horizontally scalable with PostgreSQL; supports multiple environments (dev/staging/production).
-5. Interface Requirements
+
+
+**5. Interface Requirements**
+
+   
 5.1 User Interface (Flutter Frontend)
 Screens: Auth, workspace setup, request studio, tracing config, monitoring, replay, secrets, etc.
 Dashboard: Trace explorer, test runner, collection management.
+
+
 5.2 External Interfaces
 Backend APIs: RESTful endpoints via Gin framework.
 Integrations: CLI for CI/CD, webhooks for alerts.
-6. User Stories
+
+
+**6. User Stories**
+
 6.1 Authentication & Organization
 | ID | User Story | Acceptance Criteria | Priority |
 | :--- | :--- | :--- | :--- |
@@ -129,7 +162,8 @@ Integrations: CLI for CI/CD, webhooks for alerts.
 | US-05 | As a QA engineer, I want to replay captured traffic, so I can run regressions. | Replay service executes scenarios; mocks dependencies. | High |
 | US-06 | As a DevOps engineer, I want to integrate with Slack, so alerts are sent for failures. | Webhooks trigger notifications. | Medium |
 
-7. Appendices
+**7. Appendices**
+
 Appendix A: Architecture Diagram (Go backend with handlers/services, Flutter frontend).<br>
 Appendix B: Installation Guide (Docker Compose for backend, Flutter setup for frontend).<br>
 Appendix C: File Structure (Backend: handlers/, services/, models/; Frontend: screens/, providers/).
