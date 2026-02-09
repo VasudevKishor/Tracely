@@ -1,15 +1,8 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"strings"
-	"syscall"
-	"time"
 
 	"backend/config"
 	"backend/database"
@@ -17,239 +10,203 @@ import (
 	"backend/middlewares"
 	"backend/services"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// Load configuration
 	cfg := config.Load()
-
-	// Initialize database
 	db, err := database.InitDB(cfg)
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer database.CloseDB(db)
 
-	// Run migrations
 	if err := database.RunMigrations(db); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+		log.Fatalf("Migrations failed: %v", err)
 	}
 
-	// Initialize services
+	gin.SetMode(gin.ReleaseMode)
+	if cfg.Environment == "development" {
+		gin.SetMode(gin.DebugMode)
+	}
+
+	router := gin.New()
+	router.Use(gin.Recovery())
+	router.Use(middlewares.RequestLogger())
+	router.Use(middlewares.TraceID())
+	router.Use(middlewares.ErrorHandler())
+
+	// CORS
+	router.Use(func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-Trace-ID, X-Span-ID, X-Parent-Span-ID")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
+	})
+
+	// Services
 	authService := services.NewAuthService(db, cfg)
 	workspaceService := services.NewWorkspaceService(db)
 	collectionService := services.NewCollectionService(db)
 	requestService := services.NewRequestService(db)
 	traceService := services.NewTraceService(db)
+	waterfallService := services.NewWaterfallService(db)
+	tracingConfigService := services.NewTracingConfigService(db)
 	monitoringService := services.NewMonitoringService(db)
 	governanceService := services.NewGovernanceService(db)
-	settingsService := services.NewSettingsService(db)
 	replayService := services.NewReplayService(db)
 	mockService := services.NewMockService(db)
+	workflowService := services.NewWorkflowService(db)
 	environmentService := services.NewEnvironmentService(db)
-	tracingConfigService := services.NewTracingConfigService(db)
+	secretsService := services.NewSecretsService(db, cfg.JWTSecret)
+	settingsService := services.NewSettingsService(db)
+	alertingService := services.NewAlertingService(db)
+	loadTestService := services.NewLoadTestService(db)
 
-	// Initialize handlers
+	// Handlers
 	authHandler := handlers.NewAuthHandler(authService)
 	workspaceHandler := handlers.NewWorkspaceHandler(workspaceService)
 	collectionHandler := handlers.NewCollectionHandler(collectionService)
 	requestHandler := handlers.NewRequestHandler(requestService)
-	traceHandler := handlers.NewTraceHandler(traceService)
+	traceHandler := handlers.NewTraceHandler(traceService, waterfallService)
+	tracingConfigHandler := handlers.NewTracingConfigHandler(tracingConfigService)
 	monitoringHandler := handlers.NewMonitoringHandler(monitoringService)
 	governanceHandler := handlers.NewGovernanceHandler(governanceService)
-	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	replayHandler := handlers.NewReplayHandler(replayService)
 	mockHandler := handlers.NewMockHandler(mockService)
+	workflowHandler := handlers.NewWorkflowHandler(workflowService)
 	environmentHandler := handlers.NewEnvironmentHandler(environmentService)
-	tracingConfigHandler := handlers.NewTracingConfigHandler(tracingConfigService)
+	secretsHandler := handlers.NewSecretsHandler(secretsService)
+	settingsHandler := handlers.NewSettingsHandler(settingsService)
+	alertHandler := handlers.NewAlertHandler(alertingService)
+	loadTestHandler := handlers.NewLoadTestHandler(loadTestService)
 
-	// Setup router
-	router := setupRouter(cfg, authService, authHandler, workspaceHandler, collectionHandler,
-		requestHandler, traceHandler, monitoringHandler, governanceHandler, settingsHandler,
-		replayHandler, mockHandler, environmentHandler, tracingConfigHandler)
-
-	// Create server
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%s", cfg.Port),
-		Handler:      router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
-
-	// Start server in goroutine
-	go func() {
-		log.Printf("Starting server on port %s", cfg.Port)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
-		}
-	}()
-
-	// Graceful shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	log.Println("Shutting down server...")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
-	}
-
-	log.Println("Server exited")
-}
-
-func setupRouter(cfg *config.Config, authService *services.AuthService,
-	authHandler *handlers.AuthHandler,
-	workspaceHandler *handlers.WorkspaceHandler,
-	collectionHandler *handlers.CollectionHandler,
-	requestHandler *handlers.RequestHandler,
-	traceHandler *handlers.TraceHandler,
-	monitoringHandler *handlers.MonitoringHandler,
-	governanceHandler *handlers.GovernanceHandler,
-	settingsHandler *handlers.SettingsHandler,
-	replayHandler *handlers.ReplayHandler,
-	mockHandler *handlers.MockHandler,
-	environmentHandler *handlers.EnvironmentHandler,
-	tracingConfigHandler *handlers.TracingConfigHandler) *gin.Engine {
-
-	if cfg.Environment == "production" {
-		gin.SetMode(gin.ReleaseMode)
-	}
-
-	router := gin.Default()
-
-	// CORS configuration
-	corsConfig := cors.Config{
-		AllowOrigins:     cfg.CORSOrigins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Trace-ID"},
-		ExposeHeaders:    []string{"Content-Length", "X-Trace-ID"},
-		AllowCredentials: true,
-		AllowOriginFunc: func(origin string) bool {
-			// allow any localhost port dynamically
-			return origin == "http://localhost" ||
-				origin == "http://127.0.0.1" ||
-				strings.HasPrefix(origin, "http://localhost:") ||
-				strings.HasPrefix(origin, "http://127.0.0.1:")
-		},
-		MaxAge: 12 * time.Hour,
-	}
-	router.Use(cors.New(corsConfig))
-
-	// Global middlewares
-	router.Use(middlewares.RequestLogger())
-	router.Use(middlewares.ErrorHandler())
-	router.Use(middlewares.TraceID())
-
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
-	})
-
-	// API v1 routes
-	v1 := router.Group("/api/v1")
+	api := router.Group("/api/v1")
 	{
-		// Authentication routes (public)
-		auth := v1.Group("/auth")
-		{
-			auth.POST("/login", authHandler.Login)
-			auth.POST("/register", authHandler.Register)
-			auth.POST("/refresh", authHandler.RefreshToken)
-			auth.POST("/logout", middlewares.AuthMiddleware(authService), authHandler.Logout)
-			auth.POST("/verify", middlewares.AuthMiddleware(authService), authHandler.VerifyToken)
-		}
+		// Auth (no auth middleware)
+		api.POST("/auth/login", authHandler.Login)
+		api.POST("/auth/register", authHandler.Register)
+		api.POST("/auth/logout", authHandler.Logout)
+		api.POST("/auth/refresh", authHandler.RefreshToken)
 
 		// Protected routes
-		protected := v1.Group("")
-		protected.Use(middlewares.AuthMiddleware(authService))
+		auth := api.Group("")
+		auth.Use(middlewares.AuthMiddleware(authService))
 		{
-			// Workspace routes
-			workspaces := protected.Group("/workspaces")
+			auth.POST("/auth/verify", authHandler.VerifyToken)
+
+			// Users
+			auth.GET("/users/settings", settingsHandler.GetSettings)
+			auth.PUT("/users/settings", settingsHandler.UpdateSettings)
+
+			// Workspaces
+			auth.GET("/workspaces", workspaceHandler.GetAll)
+			auth.POST("/workspaces", workspaceHandler.Create)
+			auth.GET("/workspaces/:workspace_id", workspaceHandler.GetByID)
+			auth.PUT("/workspaces/:workspace_id", workspaceHandler.Update)
+			auth.DELETE("/workspaces/:workspace_id", workspaceHandler.Delete)
+
+			// Workspace-scoped routes
+			w := auth.Group("/workspaces/:workspace_id")
 			{
-				workspaces.GET("", workspaceHandler.GetAll)
-				workspaces.POST("", workspaceHandler.Create)
-				workspaces.GET("/:workspace_id", workspaceHandler.GetByID)
-				workspaces.PUT("/:workspace_id", workspaceHandler.Update)
-				workspaces.DELETE("/:workspace_id", workspaceHandler.Delete)
+				// Collections
+				w.GET("/collections", collectionHandler.GetAll)
+				w.POST("/collections", collectionHandler.Create)
+				w.GET("/collections/:collection_id", collectionHandler.GetByID)
+				w.PUT("/collections/:collection_id", collectionHandler.Update)
+				w.DELETE("/collections/:collection_id", collectionHandler.Delete)
 
-				// Collection routes
-				workspaces.GET("/:workspace_id/collections", collectionHandler.GetAll)
-				workspaces.POST("/:workspace_id/collections", collectionHandler.Create)
-				workspaces.GET("/:workspace_id/collections/:collection_id", collectionHandler.GetByID)
-				workspaces.PUT("/:workspace_id/collections/:collection_id", collectionHandler.Update)
-				workspaces.DELETE("/:workspace_id/collections/:collection_id", collectionHandler.Delete)
+				// Requests (under collection)
+				w.POST("/collections/:collection_id/requests", requestHandler.Create)
+				w.GET("/collections/:collection_id/requests", requestHandler.GetByCollection)
+				w.GET("/requests/:request_id", requestHandler.GetByID)
+				w.PUT("/requests/:request_id", requestHandler.Update)
+				w.DELETE("/requests/:request_id", requestHandler.Delete)
+				w.POST("/requests/:request_id/execute", requestHandler.Execute)
+				w.GET("/requests/:request_id/history", requestHandler.GetHistory)
 
-				// Request routes
-				workspaces.POST("/:workspace_id/collections/:collection_id/requests", requestHandler.Create)
-				workspaces.GET("/:workspace_id/requests/:request_id", requestHandler.GetByID)
-				workspaces.PUT("/:workspace_id/requests/:request_id", requestHandler.Update)
-				workspaces.DELETE("/:workspace_id/requests/:request_id", requestHandler.Delete)
-				workspaces.POST("/:workspace_id/requests/:request_id/execute", requestHandler.Execute)
-				workspaces.GET("/:workspace_id/requests/:request_id/history", requestHandler.GetHistory)
+				// Traces
+				w.GET("/traces", traceHandler.GetTraces)
+				w.GET("/traces/:trace_id", traceHandler.GetTraceDetails)
+				w.GET("/traces/:trace_id/waterfall", traceHandler.GetWaterfall)
+				w.GET("/traces/:trace_id/critical-path", traceHandler.GetCriticalPath)
+				w.POST("/spans/:span_id/annotations", traceHandler.AddAnnotation)
 
-				// Trace routes
-				workspaces.GET("/:workspace_id/traces", traceHandler.GetTraces)
-				workspaces.GET("/:workspace_id/traces/:trace_id", traceHandler.GetTraceDetails)
-				workspaces.POST("/:workspace_id/traces/:trace_id/annotate", traceHandler.AddAnnotation)
-				workspaces.GET("/:workspace_id/traces/:trace_id/critical-path", traceHandler.GetCriticalPath)
+				// Tracing config
+				w.GET("/tracing/configs", tracingConfigHandler.GetAll)
+				w.POST("/tracing/configs", tracingConfigHandler.Create)
+				w.GET("/tracing/configs/:config_id", tracingConfigHandler.GetByID)
+				w.PUT("/tracing/configs/:config_id", tracingConfigHandler.Update)
+				w.DELETE("/tracing/configs/:config_id", tracingConfigHandler.Delete)
+				w.POST("/tracing/configs/:config_id/toggle", tracingConfigHandler.Toggle)
+				w.POST("/tracing/configs/bulk-toggle", tracingConfigHandler.BulkToggle)
+				w.GET("/tracing/services/:service_name", tracingConfigHandler.GetByServiceName)
+				w.GET("/tracing/enabled-services", tracingConfigHandler.GetEnabledServices)
+				w.GET("/tracing/disabled-services", tracingConfigHandler.GetDisabledServices)
+				w.GET("/tracing/check", tracingConfigHandler.Check)
 
-				// Monitoring routes
-				workspaces.GET("/:workspace_id/monitoring/dashboard", monitoringHandler.GetDashboard)
-				workspaces.GET("/:workspace_id/monitoring/metrics", monitoringHandler.GetMetrics)
-				workspaces.GET("/:workspace_id/monitoring/topology", monitoringHandler.GetTopology)
+				// Monitoring
+				w.GET("/monitoring/dashboard", monitoringHandler.GetDashboard)
+				w.GET("/monitoring/metrics", monitoringHandler.GetMetrics)
+				w.GET("/monitoring/topology", monitoringHandler.GetTopology)
+				w.GET("/monitoring/service-latencies", monitoringHandler.GetServiceLatencies)
 
-				// Governance routes
-				workspaces.GET("/:workspace_id/governance/policies", governanceHandler.GetPolicies)
-				workspaces.POST("/:workspace_id/governance/policies", governanceHandler.CreatePolicy)
-				workspaces.PUT("/:workspace_id/governance/policies/:policy_id", governanceHandler.UpdatePolicy)
-				workspaces.DELETE("/:workspace_id/governance/policies/:policy_id", governanceHandler.DeletePolicy)
+				// Governance
+				w.GET("/governance/policies", governanceHandler.GetPolicies)
+				w.POST("/governance/policies", governanceHandler.CreatePolicy)
+				w.PUT("/governance/policies/:policy_id", governanceHandler.UpdatePolicy)
+				w.DELETE("/governance/policies/:policy_id", governanceHandler.DeletePolicy)
 
-				// Replay routes
-				workspaces.POST("/:workspace_id/replays", replayHandler.CreateReplay)
-				workspaces.GET("/:workspace_id/replays/:replay_id", replayHandler.GetReplay)
-				workspaces.POST("/:workspace_id/replays/:replay_id/execute", replayHandler.ExecuteReplay)
-				workspaces.GET("/:workspace_id/replays/:replay_id/results", replayHandler.GetResults)
+				// Replays
+				w.GET("/replays", replayHandler.GetAll)
+				w.POST("/replays", replayHandler.CreateReplay)
+				w.GET("/replays/:replay_id", replayHandler.GetReplay)
+				w.POST("/replays/:replay_id/execute", replayHandler.ExecuteReplay)
+				w.GET("/replays/:replay_id/results", replayHandler.GetResults)
 
-				// Mock routes
-				workspaces.POST("/:workspace_id/mocks/generate", mockHandler.GenerateFromTrace)
-				workspaces.GET("/:workspace_id/mocks", mockHandler.GetAll)
-				workspaces.PUT("/:workspace_id/mocks/:mock_id", mockHandler.Update)
-				workspaces.DELETE("/:workspace_id/mocks/:mock_id", mockHandler.Delete)
+				// Mocks
+				w.GET("/mocks", mockHandler.GetAll)
+				w.POST("/mocks/generate", mockHandler.GenerateFromTrace)
+				w.PUT("/mocks/:mock_id", mockHandler.Update)
+				w.DELETE("/mocks/:mock_id", mockHandler.Delete)
 
-				// ========== ENVIRONMENT ROUTES ==========
-				workspaces.GET("/:workspace_id/environments", environmentHandler.GetEnvironments)
-				workspaces.POST("/:workspace_id/environments", environmentHandler.CreateEnvironment)
-				workspaces.GET("/:workspace_id/environments/:environment_id", environmentHandler.GetEnvironmentVariables)
-				workspaces.PUT("/:workspace_id/environments/:environment_id", environmentHandler.UpdateEnvironment)
-				workspaces.DELETE("/:workspace_id/environments/:environment_id", environmentHandler.DeleteEnvironment)
-				workspaces.POST("/:workspace_id/environments/:environment_id/variables", environmentHandler.AddEnvironmentVariable)
-				workspaces.PUT("/:workspace_id/environments/:environment_id/variables/:variable_id", environmentHandler.UpdateEnvironmentVariable)
-				workspaces.DELETE("/:workspace_id/environments/:environment_id/variables/:variable_id", environmentHandler.DeleteEnvironmentVariable)
+				// Workflows
+				w.POST("/workflows", workflowHandler.Create)
+				w.POST("/workflows/:workflow_id/execute", workflowHandler.Execute)
 
-				// ========== TRACING CONFIG ROUTES ==========
-				workspaces.GET("/:workspace_id/tracing/configs", tracingConfigHandler.GetAll)
-				workspaces.POST("/:workspace_id/tracing/configs", tracingConfigHandler.Create)
-				workspaces.GET("/:workspace_id/tracing/configs/:config_id", tracingConfigHandler.GetByID)
-				workspaces.PUT("/:workspace_id/tracing/configs/:config_id", tracingConfigHandler.Update)
-				workspaces.DELETE("/:workspace_id/tracing/configs/:config_id", tracingConfigHandler.Delete)
-				workspaces.POST("/:workspace_id/tracing/configs/:config_id/toggle", tracingConfigHandler.Toggle)
-				workspaces.POST("/:workspace_id/tracing/configs/bulk-toggle", tracingConfigHandler.BulkToggle)
-				workspaces.GET("/:workspace_id/tracing/services/:service_name", tracingConfigHandler.GetByServiceName)
-				workspaces.GET("/:workspace_id/tracing/enabled-services", tracingConfigHandler.GetEnabledServices)
-				workspaces.GET("/:workspace_id/tracing/disabled-services", tracingConfigHandler.GetDisabledServices)
-				workspaces.GET("/:workspace_id/tracing/check", tracingConfigHandler.CheckTracingEnabled)
+				// Environments
+				w.GET("/environments", environmentHandler.GetEnvironments)
+				w.POST("/environments", environmentHandler.CreateEnvironment)
+				w.GET("/environments/:environment_id", environmentHandler.GetEnvironmentVariables)
+				w.PUT("/environments/:environment_id", environmentHandler.UpdateEnvironment)
+				w.DELETE("/environments/:environment_id", environmentHandler.DeleteEnvironment)
+				w.POST("/environments/:environment_id/variables", environmentHandler.AddEnvironmentVariable)
+				w.PUT("/environments/:environment_id/variables/:variable_id", environmentHandler.UpdateEnvironmentVariable)
+				w.DELETE("/environments/:environment_id/variables/:variable_id", environmentHandler.DeleteEnvironmentVariable)
+
+				// Secrets
+				w.POST("/secrets", secretsHandler.Create)
+				w.GET("/secrets/:secret_id/value", secretsHandler.GetValue)
+				w.POST("/secrets/:secret_id/rotate", secretsHandler.Rotate)
+
+				// Alerts
+				w.POST("/alerts/rules", alertHandler.CreateRule)
+				w.GET("/alerts/active", alertHandler.GetActiveAlerts)
+				w.POST("/alerts/:alert_id/acknowledge", alertHandler.AcknowledgeAlert)
+
+				// Load test
+				w.POST("/load-test", loadTestHandler.Create)
 			}
-
-			// User settings routes
-			protected.GET("/users/settings", settingsHandler.GetSettings)
-			protected.PUT("/users/settings", settingsHandler.UpdateSettings)
 		}
 	}
 
-	return router
+	addr := ":" + cfg.Port
+	log.Printf("Server starting on %s", addr)
+	if err := router.Run(addr); err != nil {
+		log.Fatalf("Server failed: %v", err)
+	}
 }
