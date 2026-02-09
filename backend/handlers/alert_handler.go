@@ -9,14 +9,17 @@ import (
 	"github.com/google/uuid"
 )
 
+// AlertHandler handles HTTP requests related to alerting rules and active alerts.
 type AlertHandler struct {
 	alertingService *services.AlertingService
 }
 
+// NewAlertHandler creates a new instance of AlertHandler with the given alerting service.
 func NewAlertHandler(alertingService *services.AlertingService) *AlertHandler {
 	return &AlertHandler{alertingService: alertingService}
 }
 
+// CreateAlertRuleRequest defines the payload for creating a new alert rule.
 type CreateAlertRuleRequest struct {
 	Name       string  `json:"name" binding:"required"`
 	Condition  string  `json:"condition" binding:"required"`
@@ -25,6 +28,8 @@ type CreateAlertRuleRequest struct {
 	Channel    string  `json:"channel" binding:"required"`
 }
 
+// CreateRule handles the creation of a new alert rule for a specific workspace.
+// It expects a JSON payload matching CreateAlertRuleRequest.
 func (h *AlertHandler) CreateRule(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, _ := uuid.Parse(c.Param("workspace_id"))
@@ -48,6 +53,7 @@ func (h *AlertHandler) CreateRule(c *gin.Context) {
 	c.JSON(http.StatusCreated, rule)
 }
 
+// GetActiveAlerts retrieves all active alerts for a specific workspace.
 func (h *AlertHandler) GetActiveAlerts(c *gin.Context) {
 	workspaceID, _ := uuid.Parse(c.Param("workspace_id"))
 
@@ -60,6 +66,7 @@ func (h *AlertHandler) GetActiveAlerts(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"alerts": alerts})
 }
 
+// AcknowledgeAlert handles the acknowledgement of an alert by its ID.
 func (h *AlertHandler) AcknowledgeAlert(c *gin.Context) {
 	alertID, _ := uuid.Parse(c.Param("alert_id"))
 
