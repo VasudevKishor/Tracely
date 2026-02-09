@@ -130,7 +130,6 @@ Integrations: CLI for CI/CD, webhooks for alerts.
 | US-06 | As a DevOps engineer, I want to integrate with Slack, so alerts are sent for failures. | Webhooks trigger notifications. | Medium |
 
 7. Appendices
-Appendix A: Architecture Diagram (Go backend with handlers/services, Flutter frontend).
-Appendix B: Installation Guide (Docker Compose for backend, Flutter setup for frontend).
+Appendix A: Architecture Diagram (Go backend with handlers/services, Flutter frontend).<br>
+Appendix B: Installation Guide (Docker Compose for backend, Flutter setup for frontend).<br>
 Appendix C: File Structure (Backend: handlers/, services/, models/; Frontend: screens/, providers/).
-This updated SRS is tailored to the Go backend (with files like auth_service.go, trace_handler.go) and Flutter frontend (screens like auth_screen.dart, request_studio_screen.dart), ensuring relevance to the actual stack and features implemented.
