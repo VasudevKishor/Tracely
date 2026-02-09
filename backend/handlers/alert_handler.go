@@ -31,10 +31,13 @@ type CreateAlertRuleRequest struct {
 // CreateRule handles the creation of a new alert rule for a specific workspace.
 // It expects a JSON payload matching CreateAlertRuleRequest.
 func (h *AlertHandler) CreateRule(c *gin.Context) {
+	// Extract user identity from the context (populated by authentication middleware)
 	userID, _ := middlewares.GetUserID(c)
+	// Parse the workspace UUID from the URL parameter
 	workspaceID, _ := uuid.Parse(c.Param("workspace_id"))
 
 	var req CreateAlertRuleRequest
+	// Validate and bind the incoming JSON payload to our request struct
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -55,8 +58,10 @@ func (h *AlertHandler) CreateRule(c *gin.Context) {
 
 // GetActiveAlerts retrieves all active alerts for a specific workspace.
 func (h *AlertHandler) GetActiveAlerts(c *gin.Context) {
+	// Parse the workspace UUID from the URL parameter
 	workspaceID, _ := uuid.Parse(c.Param("workspace_id"))
 
+	// Fetch active alerts from the service layer
 	alerts, err := h.alertingService.GetActiveAlerts(workspaceID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -68,8 +73,10 @@ func (h *AlertHandler) GetActiveAlerts(c *gin.Context) {
 
 // AcknowledgeAlert handles the acknowledgement of an alert by its ID.
 func (h *AlertHandler) AcknowledgeAlert(c *gin.Context) {
+	// Parse the specific alert ID to be acknowledged
 	alertID, _ := uuid.Parse(c.Param("alert_id"))
 
+	// Mark the alert as acknowledged in the service
 	if err := h.alertingService.AcknowledgeAlert(alertID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
