@@ -305,4 +305,121 @@ func (h *TracingConfigHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, updatedConfig)
 }
 
-// Delete, Toggle, BulkToggle, etc. (Remain unchanged as they had no conflicts)
+// Delete deletes a tracing configuration
+func (h *TracingConfigHandler) Delete(c *gin.Context) {
+	userID, _ := middlewares.GetUserID(c)
+	configID, err := uuid.Parse(c.Param("config_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid config ID"})
+		return
+	}
+	if err := h.tracingConfigService.DeleteConfig(configID, userID); err != nil {
+		if err.Error() == "access denied" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "record not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Configuration not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// Toggle enables or disables tracing for a config
+func (h *TracingConfigHandler) Toggle(c *gin.Context) {
+	userID, _ := middlewares.GetUserID(c)
+	configID, err := uuid.Parse(c.Param("config_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid config ID"})
+		return
+	}
+	var req ToggleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	config, err := h.tracingConfigService.ToggleTracing(configID, userID, req.Enabled)
+	if err != nil {
+		if err.Error() == "access denied" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, config)
+}
+
+// BulkToggle enables or disables tracing for multiple services
+func (h *TracingConfigHandler) BulkToggle(c *gin.Context) {
+	userID, _ := middlewares.GetUserID(c)
+	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workspace ID"})
+		return
+	}
+	var req BulkToggleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	count, err := h.tracingConfigService.BulkUpdateEnabled(workspaceID, userID, req.ServiceNames, req.Enabled)
+	if err != nil {
+		if err.Error() == "access denied" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"updated": count})
+}
+
+// GetEnabledServices returns list of services with tracing enabled
+func (h *TracingConfigHandler) GetEnabledServices(c *gin.Context) {
+	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workspace ID"})
+		return
+	}
+	services, err := h.tracingConfigService.GetEnabledServices(workspaceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"enabled_services": services})
+}
+
+// GetDisabledServices returns list of services with tracing disabled
+func (h *TracingConfigHandler) GetDisabledServices(c *gin.Context) {
+	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workspace ID"})
+		return
+	}
+	services, err := h.tracingConfigService.GetDisabledServices(workspaceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"disabled_services": services})
+}
+
+// Check returns whether tracing is enabled for a service
+func (h *TracingConfigHandler) Check(c *gin.Context) {
+	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workspace ID"})
+		return
+	}
+	serviceName := c.Query("service_name")
+	if serviceName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "service_name query is required"})
+		return
+	}
+	enabled := h.tracingConfigService.IsTracingEnabled(workspaceID, serviceName)
+	c.JSON(http.StatusOK, gin.H{"enabled": enabled, "service_name": serviceName})
+}
