@@ -21,8 +21,10 @@ func NewCloudWatchIntegration(cfg aws.Config, namespace string) *CloudWatchInteg
 	}
 }
 
-// PutMetric sends metric to CloudWatch
+// PutMetric publishes a single custom metric data point to CloudWatch.
+// The metric is recorded under the configured namespace with the given name, value, unit, and optional dimensions for filtering and aggregation.
 func (c *CloudWatchIntegration) PutMetric(metricName string, value float64, unit types.StandardUnit, dimensions map[string]string) error {
+	// Convert dimension map into CloudWatch Dimension objects.
 	dims := []types.Dimension{}
 	for k, v := range dimensions {
 		dims = append(dims, types.Dimension{
@@ -31,6 +33,7 @@ func (c *CloudWatchIntegration) PutMetric(metricName string, value float64, unit
 		})
 	}
 
+	//Send metric to CloudWatch.
 	_, err := c.client.PutMetricData(context.TODO(), &cloudwatch.PutMetricDataInput{
 		Namespace: aws.String(c.namespace),
 		MetricData: []types.MetricDatum{
@@ -47,7 +50,9 @@ func (c *CloudWatchIntegration) PutMetric(metricName string, value float64, unit
 	return err
 }
 
-// GetMetricStatistics retrieves metric statistics
+// GetMetricStatistics retrieves aggregated statistics for a CloudWatch metric over a specified time range. 
+// The caller specifies the aggregation period and the statistic to compute.
+func (c *CloudWatchIntegration) GetMetricStatistics(
 func (c *CloudWatchIntegration) GetMetricStatistics(metricName string, start, end time.Time, period int32, statistic types.Statistic) ([]types.Datapoint, error) {
 	result, err := c.client.GetMetricStatistics(context.TODO(), &cloudwatch.GetMetricStatisticsInput{
 		Namespace:  aws.String(c.namespace),
