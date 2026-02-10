@@ -214,12 +214,33 @@ Or with Make: `make run`. Server listens on `http://localhost:8081` (or your `PO
 
 ```bash
 cd frontend_1
-flutter run -d chrome   # web
+flutter run -d chrome   # web (unchanged; uses localhost:8081)
 flutter run -d macos    # macOS desktop
-flutter run             # default device
+flutter run             # default device (e.g. connected phone or emulator)
 ```
 
-For **Android emulator**, the app uses `http://10.0.2.2:8081` (see comments in `api_service.dart`). For a **physical device**, set `baseUrl` to your machine’s IP (e.g. `http://192.168.1.10:8081/api/v1`).
+**Mobile / emulator:** The app picks the API base URL by platform so the **web part is unchanged**:
+
+- **Web:** `http://localhost:8081/api/v1` (from `lib/config/api_config_web.dart`).
+- **Android emulator:** `http://10.0.2.2:8081/api/v1` (from `lib/config/api_config_io.dart`).
+- **iOS simulator / desktop:** `http://localhost:8081/api/v1`.
+
+To run on an Android emulator: start the emulator (e.g. Android Studio → AVD), start the backend on your host, then:
+
+```bash
+cd frontend_1
+flutter run -d emulator-5554   # or flutter run and pick the emulator
+```
+
+To build an APK (run locally; first build can take several minutes):
+
+```bash
+cd frontend_1
+flutter build apk          # release APK → build/app/outputs/flutter-apk/app-release.apk
+flutter build apk --debug   # debug APK
+```
+
+For a **physical device** on the same network, change the base URL for the mobile build (e.g. in `api_config_io.dart`) to your machine’s IP: `http://192.168.x.x:8081/api/v1`.
 
 ### Default Login
 

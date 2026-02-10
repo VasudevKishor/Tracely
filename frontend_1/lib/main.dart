@@ -16,6 +16,7 @@ import 'providers/workspace_provider.dart';
 import 'providers/collection_provider.dart';
 import 'providers/governance_provider.dart';
 import 'package:http/http.dart' as http;
+import 'services/api_service.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/trace_provider.dart';
 import 'providers/environment_provider.dart';
@@ -133,7 +134,7 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
                     final token = authProvider.user!['token']; // get JWT
 
                     final response = await http.get(
-                      Uri.parse('http://localhost:8081/api/v1/workspaces'),
+                      Uri.parse('${ApiService.baseUrl}/workspaces'),
                       headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer $token',

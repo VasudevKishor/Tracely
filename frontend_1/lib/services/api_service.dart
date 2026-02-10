@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/api_config.dart';
+
 class ApiService {
-  static const String baseUrl = 'http://localhost:8081/api/v1';
-  // For Android emulator: 'http://10.0.2.2:8081/api/v1'
-  // For iOS simulator: 'http://localhost:8081/api/v1'
-  // For real device: 'http://YOUR_IP:8081/api/v1'
+  /// Web: localhost. Android emulator: 10.0.2.2. iOS simulator / desktop: localhost. Set via api_config.
+  static String get baseUrl => ApiConfig.baseUrl;
   
   String? _accessToken;
   String? _refreshToken;
