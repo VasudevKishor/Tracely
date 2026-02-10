@@ -18,7 +18,8 @@ func NewPagerDutyIntegration(integrationKey string) *PagerDutyIntegration {
 	}
 }
 
-// TriggerIncident creates a PagerDuty incident
+// TriggerIncident creates a new incident in PagerDuty.
+// It sends a "trigger" event with the provided summary, severity level and source identifier
 func (p *PagerDutyIntegration) TriggerIncident(summary, severity, source string) error {
 	payload := map[string]interface{}{
 		"routing_key":  p.integrationKey,
@@ -45,7 +46,10 @@ func (p *PagerDutyIntegration) TriggerIncident(summary, severity, source string)
 	return nil
 }
 
-// ResolveIncident resolves a PagerDuty incident
+// ResolveIncident resolves an existing PagerDuty incident.
+// It sends a "resolve" event associated with the given deduplication key,
+// which PagerDuty uses to identify and close the previously triggered incident
+// linked to the same integration and event stream.
 func (p *PagerDutyIntegration) ResolveIncident(dedupKey string) error {
 	payload := map[string]interface{}{
 		"routing_key":  p.integrationKey,
