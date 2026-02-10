@@ -1,3 +1,7 @@
+/*
+Package services provides utility functions for generating test data
+from JSON schemas or realistic patterns.
+*/
 package services
 
 import (
@@ -8,14 +12,25 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 )
 
+// TestDataGenerator is responsible for generating test data from JSON schemas
+// or generating realistic mock data for common entities like users, products, and orders.
 type TestDataGenerator struct{}
 
+// NewTestDataGenerator creates a new TestDataGenerator instance
+// and seeds the random generator for gofakeit.
 func NewTestDataGenerator() *TestDataGenerator {
 	gofakeit.Seed(time.Now().UnixNano())
 	return &TestDataGenerator{}
 }
 
-// GenerateFromSchema generates test data from JSON schema
+/*
+GenerateFromSchema generates test data based on a JSON schema.
+Parameters:
+- schemaJSON: JSON schema as a string.
+Returns:
+- Generated JSON data as string.
+- Error if the schema parsing or generation fails.
+*/
 func (g *TestDataGenerator) GenerateFromSchema(schemaJSON string) (string, error) {
 	var schema map[string]interface{}
 	if err := json.Unmarshal([]byte(schemaJSON), &schema); err != nil {
@@ -27,7 +42,9 @@ func (g *TestDataGenerator) GenerateFromSchema(schemaJSON string) (string, error
 	return string(result), nil
 }
 
+// generateFromSchemaObject generates data based on a parsed JSON schema object.
 func (g *TestDataGenerator) generateFromSchemaObject(schema map[string]interface{}) interface{} {
+	//Figure out what type this schema wants (object, array, string, etc.).
 	schemaType, ok := schema["type"].(string)
 	if !ok {
 		return nil
@@ -51,6 +68,7 @@ func (g *TestDataGenerator) generateFromSchemaObject(schema map[string]interface
 	}
 }
 
+// generateObject generates a map object based on "properties" in the schema.
 func (g *TestDataGenerator) generateObject(schema map[string]interface{}) map[string]interface{} {
 	obj := make(map[string]interface{})
 
@@ -65,6 +83,8 @@ func (g *TestDataGenerator) generateObject(schema map[string]interface{}) map[st
 	return obj
 }
 
+// generateArray generates an array of items based on "items" in the schema,
+// using minItems and maxItems if specified.
 func (g *TestDataGenerator) generateArray(schema map[string]interface{}) []interface{} {
 	minItems := 1
 	maxItems := 5
@@ -88,8 +108,10 @@ func (g *TestDataGenerator) generateArray(schema map[string]interface{}) []inter
 	return arr
 }
 
+// generateString generates a string based on schema constraints.
+// Supports formats (email, date, UUID, URI, IPv4), enum values, or min/max lengths.
 func (g *TestDataGenerator) generateString(schema map[string]interface{}) string {
-	// Check for format
+	// Check for specific format
 	if format, ok := schema["format"].(string); ok {
 		switch format {
 		case "email":
@@ -107,12 +129,12 @@ func (g *TestDataGenerator) generateString(schema map[string]interface{}) string
 		}
 	}
 
-	// Check for pattern or enum
+	// Check for enum
 	if enum, ok := schema["enum"].([]interface{}); ok {
 		return enum[rand.Intn(len(enum))].(string)
 	}
 
-	// Default string
+	// Default random string
 	minLength := 5
 	maxLength := 20
 	if min, ok := schema["minLength"].(float64); ok {
@@ -125,6 +147,7 @@ func (g *TestDataGenerator) generateString(schema map[string]interface{}) string
 	return gofakeit.LetterN(uint(minLength + rand.Intn(maxLength-minLength+1)))
 }
 
+// generateInteger generates a random integer within min/max constraints if specified.
 func (g *TestDataGenerator) generateInteger(schema map[string]interface{}) int {
 	min := 0
 	max := 100
@@ -139,6 +162,7 @@ func (g *TestDataGenerator) generateInteger(schema map[string]interface{}) int {
 	return min + rand.Intn(max-min+1)
 }
 
+// generateNumber generates a random float number within min/max constraints.
 func (g *TestDataGenerator) generateNumber(schema map[string]interface{}) float64 {
 	min := 0.0
 	max := 100.0
@@ -153,11 +177,15 @@ func (g *TestDataGenerator) generateNumber(schema map[string]interface{}) float6
 	return min + rand.Float64()*(max-min)
 }
 
+// generateBoolean generates a random boolean value.
 func (g *TestDataGenerator) generateBoolean() bool {
 	return rand.Float64() > 0.5
 }
 
-// GenerateRealisticData generates realistic test data for common patterns
+// GenerateRealisticData generates realistic mock data for common entities:
+// - user: id, name, email, phone, address, created_at
+// - product: id, name, price, description, category
+// - order: id, customer_id, total, status, created_at
 func (g *TestDataGenerator) GenerateRealisticData(dataType string) interface{} {
 	switch dataType {
 	case "user":
