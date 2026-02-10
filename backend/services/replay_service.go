@@ -106,6 +106,17 @@ func (s *ReplayService) ExecuteReplay(replayID, userID uuid.UUID) (*models.Repla
 	return &execution, nil
 }
 
+func (s *ReplayService) GetAll(workspaceID, userID uuid.UUID) ([]models.Replay, error) {
+	if !s.workspaceService.HasAccess(workspaceID, userID) {
+		return nil, errors.New("access denied")
+	}
+	var replays []models.Replay
+	if err := s.db.Where("workspace_id = ?", workspaceID).Order("created_at DESC").Find(&replays).Error; err != nil {
+		return nil, err
+	}
+	return replays, nil
+}
+
 func (s *ReplayService) GetResults(replayID, userID uuid.UUID) ([]models.ReplayExecution, error) {
 	replay, err := s.GetReplay(replayID, userID)
 	if err != nil {

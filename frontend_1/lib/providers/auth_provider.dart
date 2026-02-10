@@ -36,7 +36,7 @@ class AuthProvider with ChangeNotifier {
       'id': data['user_id'],
       'name': data['name'],
       'email': data['email'],
-      'token': data['token'], // <-- add token here
+      'token': data['access_token'] ?? data['token'],
     };
       _isAuthenticated = true;
       notifyListeners();

@@ -67,6 +67,21 @@ func (h *RequestHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, request)
 }
 
+func (h *RequestHandler) GetByCollection(c *gin.Context) {
+	userID, _ := middlewares.GetUserID(c)
+	collectionID, err := uuid.Parse(c.Param("collection_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid collection ID"})
+		return
+	}
+	requests, err := h.requestService.GetByCollection(collectionID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"requests": requests})
+}
+
 func (h *RequestHandler) GetByID(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	requestID, err := uuid.Parse(c.Param("request_id"))

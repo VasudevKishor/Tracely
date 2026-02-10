@@ -233,8 +233,6 @@ type RefreshToken struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-// models/models.go - Add these models
-
 type Environment struct {
 	ID          uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
 	WorkspaceID uuid.UUID `gorm:"type:uuid;not null"`
@@ -291,8 +289,8 @@ type ServiceTracingConfig struct {
 	CaptureRequestBody  bool           `gorm:"default:false" json:"capture_request_body"`    // Whether to capture request body
 	CaptureResponseBody bool           `gorm:"default:false" json:"capture_response_body"`   // Whether to capture response body
 	MaxBodySizeBytes    int            `gorm:"default:10240" json:"max_body_size_bytes"`     // Max body size to capture (10KB default)
-	ExcludePaths        string         `gorm:"type:jsonb;default:'[]'" json:"exclude_paths"` // JSON array of paths to exclude from tracing
-	CustomTags          string         `gorm:"type:jsonb;default:'{}'" json:"custom_tags"`   // JSON object of custom tags to add
+	ExcludePaths        string         `gorm:"type:jsonb;default:'[]'" json:"exclude_paths"` // JSON array of paths to exclude
+	CustomTags          string         `gorm:"type:jsonb;default:'{}'" json:"custom_tags"`   // JSON object of custom tags
 	Description         string         `gorm:"type:text" json:"description"`
 	CreatedAt           time.Time      `json:"created_at"`
 	UpdatedAt           time.Time      `json:"updated_at"`
