@@ -12,11 +12,12 @@ import (
 )
 
 type TraceHandler struct {
-	traceService *services.TraceService
+	traceService     *services.TraceService
+	waterfallService *services.WaterfallService
 }
 
-func NewTraceHandler(traceService *services.TraceService) *TraceHandler {
-	return &TraceHandler{traceService: traceService}
+func NewTraceHandler(traceService *services.TraceService, waterfallService *services.WaterfallService) *TraceHandler {
+	return &TraceHandler{traceService: traceService, waterfallService: waterfallService}
 }
 
 func (h *TraceHandler) GetTraces(c *gin.Context) {
@@ -118,4 +119,24 @@ func (h *TraceHandler) GetCriticalPath(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"critical_path": criticalPath,
 	})
+}
+
+func (h *TraceHandler) GetWaterfall(c *gin.Context) {
+	userID, _ := middlewares.GetUserID(c)
+	traceID, err := uuid.Parse(c.Param("trace_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid trace ID"})
+		return
+	}
+	// Verify access via trace details
+	if _, _, err := h.traceService.GetTraceDetails(traceID, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	waterfall, err := h.waterfallService.GenerateWaterfall(traceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, waterfall)
 }

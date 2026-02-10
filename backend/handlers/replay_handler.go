@@ -25,6 +25,21 @@ type CreateReplayRequest struct {
 	Configuration     map[string]interface{} `json:"configuration"`
 }
 
+func (h *ReplayHandler) GetAll(c *gin.Context) {
+	userID, _ := middlewares.GetUserID(c)
+	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workspace ID"})
+		return
+	}
+	replays, err := h.replayService.GetAll(workspaceID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"replays": replays})
+}
+
 func (h *ReplayHandler) CreateReplay(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
