@@ -52,6 +52,30 @@ class CollectionProvider with ChangeNotifier {
     }
   }
   
+  Future<bool> addRequestToCollection(String collectionId, Map<String, dynamic> requestData, String workspaceId) async {
+    try {
+      _errorMessage = null;
+      final newRequest = await _apiService.createRequest(workspaceId, collectionId, requestData);
+      
+      // Update local state
+      final index = _collections.indexWhere((c) => c['id'] == collectionId);
+      if (index != -1) {
+        if (_collections[index]['requests'] == null) {
+          _collections[index]['requests'] = [];
+        }
+        final List<dynamic> requests = _collections[index]['requests'];
+        requests.add(newRequest);
+        notifyListeners();
+      }
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  
   void clearError() {
     _errorMessage = null;
     notifyListeners();
