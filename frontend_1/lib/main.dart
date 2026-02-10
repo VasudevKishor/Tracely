@@ -209,12 +209,20 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
                           });
                         },
                         itemBuilder: (context) {
-                          return List.generate(_screenNames.length, (index) {
+                          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                          final isAuthenticated = authProvider.isAuthenticated;
+                          
+                          // Allowed screens before login: LANDING(0), AUTH(1), STUDIO(4), SETTINGS(10)
+                          final allowedScreens = isAuthenticated 
+                            ? List.generate(_screenNames.length, (i) => i) // All screens when authenticated
+                            : [0, 1, 4, 10]; // Only Landing, Auth, Studio, Settings when not authenticated
+                          
+                          return allowedScreens.map((index) {
                             return PopupMenuItem<int>(
                               value: index,
                               child: Text(_screenNames[index]),
                             );
-                          });
+                          }).toList();
                         },
                       ),
                     ),
