@@ -9,12 +9,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// EnvironmentHandler manages environment configurations (e.g., staging, production) within workspaces.
 type EnvironmentHandler struct {
 	environmentService *services.EnvironmentService
 }
 
-// NewEnvironmentHandler creates a new instance of EnvironmentHandler.
 func NewEnvironmentHandler(environmentService *services.EnvironmentService) *EnvironmentHandler {
 	return &EnvironmentHandler{environmentService: environmentService}
 }
@@ -40,9 +38,8 @@ type CreateEnvironmentVariableRequest struct {
 	Description string `json:"description"`
 }
 
-// GetAll returns all environments for a workspace.
-func (h *EnvironmentHandler) GetAll(c *gin.Context) {
-	// Identify user and target workspace
+// GetEnvironments returns all environments for a workspace
+func (h *EnvironmentHandler) GetEnvironments(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
 	if err != nil {
@@ -61,34 +58,8 @@ func (h *EnvironmentHandler) GetAll(c *gin.Context) {
 	})
 }
 
-// GetByID retrieves details for a specific environment.
-func (h *EnvironmentHandler) GetByID(c *gin.Context) {
-	// Identify user and target workspace/environment IDs
-	userID, _ := middlewares.GetUserID(c)
-	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workspace ID"})
-		return
-	}
-
-	environmentID, err := uuid.Parse(c.Param("environment_id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid environment ID"})
-		return
-	}
-
-	environment, err := h.environmentService.GetByID(workspaceID, environmentID, userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, environment)
-}
-
-// Create initializes a new environment within a workspace.
-func (h *EnvironmentHandler) Create(c *gin.Context) {
-	// Identify user and target workspace
+// CreateEnvironment creates a new environment
+func (h *EnvironmentHandler) CreateEnvironment(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
 	if err != nil {
@@ -97,7 +68,6 @@ func (h *EnvironmentHandler) Create(c *gin.Context) {
 	}
 
 	var req CreateEnvironmentRequest
-	// Parse and validate the creation request
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -130,9 +100,8 @@ func (h *EnvironmentHandler) Create(c *gin.Context) {
 	})
 }
 
-// Update modifies an existing environment's properties.
-func (h *EnvironmentHandler) Update(c *gin.Context) {
-	// Identify user and target workspace/environment IDs
+// UpdateEnvironment updates an existing environment
+func (h *EnvironmentHandler) UpdateEnvironment(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
 	if err != nil {
@@ -188,9 +157,8 @@ func (h *EnvironmentHandler) Update(c *gin.Context) {
 	})
 }
 
-// Delete removes an environment and its associated data.
-func (h *EnvironmentHandler) Delete(c *gin.Context) {
-	// Identify user and target workspace/environment IDs
+// DeleteEnvironment deletes an environment
+func (h *EnvironmentHandler) DeleteEnvironment(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
 	if err != nil {
@@ -214,9 +182,8 @@ func (h *EnvironmentHandler) Delete(c *gin.Context) {
 	})
 }
 
-// GetEnvironmentVariables retrieves all configuration variables for a specific environment.
+// GetEnvironmentVariables returns variables for an environment
 func (h *EnvironmentHandler) GetEnvironmentVariables(c *gin.Context) {
-	// Identify user and target environment
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
 	if err != nil {
@@ -259,9 +226,8 @@ func (h *EnvironmentHandler) GetEnvironmentVariables(c *gin.Context) {
 	})
 }
 
-// AddEnvironmentVariable adds a new key-value pair to an environment's configuration.
+// AddEnvironmentVariable adds a new variable to an environment
 func (h *EnvironmentHandler) AddEnvironmentVariable(c *gin.Context) {
-	// Identify user and target environment
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
 	if err != nil {
@@ -296,9 +262,8 @@ func (h *EnvironmentHandler) AddEnvironmentVariable(c *gin.Context) {
 	})
 }
 
-// UpdateEnvironmentVariable updates the key, value, or metadata of an existing variable.
+// UpdateEnvironmentVariable updates an existing variable
 func (h *EnvironmentHandler) UpdateEnvironmentVariable(c *gin.Context) {
-	// Identify user and target variable
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
 	if err != nil {
@@ -349,9 +314,8 @@ func (h *EnvironmentHandler) UpdateEnvironmentVariable(c *gin.Context) {
 	})
 }
 
-// DeleteEnvironmentVariable removes a configuration variable from an environment.
+// DeleteEnvironmentVariable deletes a variable from an environment
 func (h *EnvironmentHandler) DeleteEnvironmentVariable(c *gin.Context) {
-	// Identify user and target variable
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
 	if err != nil {

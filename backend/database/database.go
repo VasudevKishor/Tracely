@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -92,7 +93,54 @@ func RunMigrations(db *gorm.DB) error {
 	// Create indexes for better performance
 	createIndexes(db)
 
+	if err := SeedDefaultUser(db); err != nil {
+		log.Printf("Seed default user (non-fatal): %v", err)
+	}
+
 	log.Println("Database migrations completed successfully")
+	return nil
+}
+
+// SeedDefaultUser creates a default login user if no users exist (for local/dev).
+const DefaultUserEmail = "admin@tracely.com"
+const DefaultUserPassword = "admin123"
+
+func SeedDefaultUser(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&models.User{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+	hashed, err := bcrypt.GenerateFromPassword([]byte(DefaultUserPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user := models.User{
+		Email:    DefaultUserEmail,
+		Password: string(hashed),
+		Name:     "Admin",
+	}
+	if err := db.Create(&user).Error; err != nil {
+		return err
+	}
+	ws := models.Workspace{
+		Name:        "Default Workspace",
+		Description: "Default workspace",
+		OwnerID:     user.ID,
+	}
+	if err := db.Create(&ws).Error; err != nil {
+		return err
+	}
+	if err := db.Create(&models.WorkspaceMember{
+		WorkspaceID: ws.ID,
+		UserID:      user.ID,
+		Role:        "admin",
+	}).Error; err != nil {
+		return err
+	}
+	log.Printf("Seeded default user: %s", DefaultUserEmail)
 	return nil
 }
 

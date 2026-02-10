@@ -31,14 +31,41 @@ dev: ## Run with hot reload (requires air)
 	@echo "Running in development mode with hot reload..."
 	@air
 
-test: ## Run tests
-	@echo "Running tests..."
-	@go test -v ./...
+# Testing
+.PHONY: test test-unit test-integration test-coverage
 
-test-coverage: ## Run tests with coverage
+test: test-unit
+
+test-unit:
+	@echo "Running unit tests..."
+	go test ./... -v -short
+
+test-integration:
+	@echo "Running integration tests..."
+	go test ./... -v -tags=integration
+
+test-coverage:
 	@echo "Running tests with coverage..."
-	@go test -v -coverprofile=coverage.out ./...
-	@go tool cover -html=coverage.out -o coverage.html
+	go test ./... -coverprofile=coverage.out
+	go tool cover -func=coverage.out
+
+test-html-coverage:
+	@echo "Generating HTML coverage report..."
+	go test ./... -coverprofile=coverage.out
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Open coverage.html in your browser"
+
+test-services:
+	@echo "Testing services..."
+	go test ./services -v
+
+test-handlers:
+	@echo "Testing handlers..."
+	go test ./handlers -v
+
+test-models:
+	@echo "Testing models..."
+	go test ./models -v
 
 clean: ## Clean build artifacts
 	@echo "Cleaning..."

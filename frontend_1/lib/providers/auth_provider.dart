@@ -32,13 +32,12 @@ class AuthProvider with ChangeNotifier {
     try {
       _errorMessage = null;
       final data = await _apiService.login(email, password);
-      print('DEBUG LOGIN RESPONSE: $data');
       _user = {
-        'id': data['user_id'],
-        'name': data['name'],
-        'email': data['email'],
-        'token': data['access_token'], // Fixed: backend returns access_token
-      };
+      'id': data['user_id'],
+      'name': data['name'],
+      'email': data['email'],
+      'token': data['access_token'] ?? data['token'],
+    };
       _isAuthenticated = true;
       notifyListeners();
       return true;

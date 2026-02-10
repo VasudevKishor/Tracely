@@ -59,3 +59,19 @@ func (h *MonitoringHandler) GetTopology(c *gin.Context) {
 
 	c.JSON(http.StatusOK, topology)
 }
+
+func (h *MonitoringHandler) GetServiceLatencies(c *gin.Context) {
+	userID, _ := middlewares.GetUserID(c)
+	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workspace ID"})
+		return
+	}
+	timeRange := c.DefaultQuery("time_range", "last_hour")
+	latencies, err := h.monitoringService.GetServiceLatencies(workspaceID, userID, timeRange)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"services": latencies})
+}

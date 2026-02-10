@@ -15,8 +15,8 @@ class DashboardProvider with ChangeNotifier {
   // Get specific metrics with defaults
   double get uptime => (_dashboardData?['uptime'] ?? 99.97).toDouble();
   double get errorRate => (_dashboardData?['error_rate'] ?? 0.12).toDouble();
-  int get avgLatency => (_dashboardData?['avg_response_time_ms'] ?? 142).toInt();
-  String get totalRequests => _dashboardData?['total_requests']?.toString() ?? '0';
+  int get avgLatency => (_dashboardData?['avg_latency'] ?? 142);
+  String get totalRequests => _dashboardData?['total_requests'] ?? '2.4M';
   
   Future<void> loadDashboard(String workspaceId) async {
     _isLoading = true;

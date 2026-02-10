@@ -1,135 +1,170 @@
-# Software Requirements Specification (SRS)
+Software Requirements Specification (SRS)
 
-**Project Name:** Unified API debugging , Distributed Tracing and scenario automation platform (beyond postman/ hoppscotch)
-**Version:** 1.0
-**Status:** Draft
-**Date:** 2025-12-09
 
----
-## 1. Introduction
+Project Name: Unified API Debugging, Distributed Tracing, and Scenario Automation Platform
 
-### 1.1 Purpose
-The purpose of this document is to define the requirements for the **Unified API Observability & Automation Platform**. This platform is designed to transcend traditional manual API testing tools (like Postman or Hoppscotch) by offering automated traffic recording, zero-code test generation, and distributed tracing.
 
-### 1.2 Scope
-The system will function as a middleware or sidecar agent that:
-* **Intercepts** real-time API traffic (requests/responses) from application environments.
-* **Converts** captured traffic into automated test cases.
-* **Mocks** downstream dependencies (Databases, External APIs) automatically.
-* **Visualizes** request flows via Distributed Tracing.
-* **Replays** traffic for regression testing without writing manual scripts.
+Version: 1.0
 
-### 1.3 Definitions and Acronyms
+Date: 2025-12-30
+
+**1. Introduction**
+
+   
+<mark>1.1 Purpose</mark>
+
+
+The purpose of this document is to define the requirements for the Unified API Debugging, Distributed Tracing, and Scenario Automation Platform. This platform is designed to provide a comprehensive solution for API testing, observability, and automation, built on a Go backend with GORM for database interactions and a Flutter frontend for cross-platform user interfaces. It enables developers to debug APIs, visualize distributed traces, automate testing, and manage scenarios through a web-based dashboard and mobile app.
+
+<mark>1.2 Scope</mark>
+
+
+The system functions as a full-stack application with:
+
+Backend (Go): Handles authentication, workspace management, API request execution, distributed tracing, mocking, replay, and integrations.
+Frontend (Flutter): Provides a user interface for authentication, workspace setup, request building, tracing visualization, and automation controls.
+Core Features: JWT-based authentication, multi-tenant workspaces, request collections, real-time tracing, automated test generation, dependency mocking, and scenario replay.
+Integrations: Supports third-party tools like Slack, PagerDuty, Prometheus, and CI/CD pipelines.
+Out of Scope: Direct eBPF integration (though tracing middleware supports non-intrusive monitoring); full Kubernetes-native deployment (Docker Compose provided).<br>
+
+
+<mark>1.3 Definitions and Acronyms</mark>
 | Term | Definition |
 | :--- | :--- |
-| **eBPF** | Extended Berkeley Packet Filter (technology for non-intrusive monitoring) |
-| **Mocking** | Simulating the behavior of real dependencies (e.g., a database) |
-| **Trace** | A record of the path a request takes through various services |
-| **Regression** | A software bug introduced by a new change |
+| JWT | JSON Web Token (used for authentication) |
+| RBAC | Role-Based Access Control (user permissions in workspaces) |
+| GORM | Go ORM for database interactions |
+| Flutter | Cross-platform UI framework for mobile/web apps |
+| Trace | A record of the path a request takes through services, with spans and metadata |
+| Replay | Re-executing captured requests for testing or debugging |
+| Mock | Simulated responses for dependencies (e.g., databases, external APIs) |
 
----
+**2. Overall Description**
 
-## 2. Overall Description
+   
+<mark>2.1 Product Perspective</mark>
+This platform integrates into the SDLC as a centralized tool for API observability and automation. The Go backend manages data persistence with PostgreSQL (via GORM), while the Flutter frontend offers responsive screens for user interaction. It captures real-world API traffic, generates tests, and provides tracing without requiring code changes in target applications.
 
-### 2.1 Product Perspective
-Unlike standard HTTP clients, this platform integrates directly into the software development lifecycle (SDLC). It sits between the user and the backend services to capture "real-world" usage data and convert it into "test data."
 
-### 2.2 User Classes and Characteristics
-* **Backend Developer:** Uses the tool to debug failed requests and generate tests for their code.
-* **QA Engineer:** Uses the regression replay feature to validate releases.
-* **DevOps Engineer:** Configures the tracing agent and monitors system latency.
 
-### 2.3 Operating Environment
-* **Agent Compatibility:** Docker, Kubernetes, Linux (Systemd).
-* **Language Support:** Go, Node.js, Python, Java.
-* **User Interface:** Web-based Dashboard (React/Next.js).
+<mark>2.2 User Classes and Characteristics</mark>
+Backend Developer: Uses the platform to build and test APIs, view traces, and debug issues via the Flutter app or web dashboard.
+QA Engineer: Leverages replay and test generation features for regression testing.
+DevOps Engineer: Configures tracing, monitors performance, and sets up integrations.
+All Users: Require basic technical knowledge; the Flutter UI simplifies interactions.
 
----
 
-## 3. System Features (Functional Requirements)
+<mark>2.3 Operating Environment</mark>
+Backend: Go 1.x, PostgreSQL database, Docker for containerization.
+Frontend: Flutter (Dart), supports iOS, Android, and web.
+Deployment: Docker Compose for local setup; Kubernetes for production.
+External Dependencies: Integrations with Slack, PagerDuty, Prometheus, CloudWatch.
 
-### 3.1 Traffic Capture & Recording
-**Description:** The core ability to record interactions without code changes.
 
-| ID | Requirement | Priority |
-| :--- | :--- | :--- |
-| **FR-01** | The system shall capture HTTP/gRPC requests and responses via a proxy or SDK. | High |
-| **FR-02** | The system shall record timestamp, headers, body, and status codes for every transaction. | High |
-| **FR-03** | The system shall allow filtering of captured traffic (e.g., exclude `/health-check` endpoints). | Medium |
+**3. System Features (Functional Requirements)**
 
-### 3.2 Automated Test Generation (Zero-Code)
-**Description:** Converting recorded traffic into reusable test suites.
+
+<mark>3.1 Authentication & Security</mark>
+Description: Secure user access with JWT and RBAC.
 
 | ID | Requirement | Priority |
 | :--- | :--- | :--- |
-| **FR-04** | The system shall automatically generate a test case file (YAML/JSON) from a recorded session. | High |
-| **FR-05** | The system shall allow users to edit the expected response assertions in the generated test. | Medium |
-| **FR-06** | The system shall support "Noise Filtering" (ignoring dynamic fields like timestamps or random IDs during comparison). | High |
+| FR-01 | The system shall support user registration, login, logout, and token refresh using JWT. | High |
+| FR-02 | The system shall hash passwords with bcrypt and manage refresh tokens with revocation. | High |
+| FR-03 | The system shall enforce RBAC in workspaces (admin, member, viewer roles). | High |
+| FR-04 | The system shall log authentication events for audit trails. | Medium |
 
-### 3.3 Dependency Mocking
-**Description:** Isolating the service under test.
-
-| ID | Requirement | Priority |
-| :--- | :--- | :--- |
-| **FR-07** | The system shall record interactions with downstream databases (SQL, Mongo) and external APIs. | High |
-| **FR-08** | The system shall automatically mock these dependencies during test replay, removing the need for a live database connection. | High |
-
-### 3.4 Distributed Tracing
-**Description:** Visualizing the life of a request.
+<mark>3.2 Workspace & Organization Management</mark>
+Description: Multi-tenant collaboration.
 
 | ID | Requirement | Priority |
 | :--- | :--- | :--- |
-| **FR-09** | The system shall generate a visual "Flame Graph" showing the latency of every span in a request. | Medium |
-| **FR-10** | The system shall correlate logs with traces for unified debugging. | Medium |
+| FR-05 | The system shall allow workspace creation, updates, and deletion with automatic user setup. | High |
+| FR-06 | The system shall manage team members with roles and environment variables/secrets. | High |
+| FR-07 | The system shall support user settings and preferences. | Medium |
 
----
+<mark>3.3 API Testing & Request Management</mark>
+Description: Core testing functionality.
 
-## 4. Non-Functional Requirements
+| ID | Requirement | Priority |
+| :--- | :--- | :--- |
+| FR-08 | The system shall provide a request builder for HTTP methods, headers, query params, and bodies. | High |
+| FR-09 | The system shall execute requests in real-time, capture responses, and track history. | High |
+| FR-10 | The system shall organize requests into collections with sharing capabilities. | High |
+| FR-11 | The system shall validate requests, generate test data, and mask PII. | High |
 
-### 4.1 Performance
-* **Latency Overhead:** The recording agent must add no more than **10ms** of latency to the application request.
-* **Throughput:** The system must handle capturing **1,000 requests per second** per instance.
+<mark>3.4 Distributed Tracing & Monitoring</mark>
+Description: Observability for microservices.
 
-### 4.2 Security & Privacy
-* **Data Sanitization:** The system must automatically redact sensitive PII (e.g., Credit Card numbers, Auth Tokens) from logs and recordings.
-* **Access Control:** Only authenticated users can view production traces.
+| ID | Requirement | Priority |
+| :--- | :--- | :--- |
+| FR-12 | The system shall collect and store distributed traces with spans, tags, logs, and timing. | High |
+| FR-13 | The system shall provide monitoring dashboards with performance metrics (response times, error rates, percentiles). | High |
+| FR-14 | The system shall visualize traces via waterfall analysis and support failure injection/load testing. | Medium |
+| FR-15 | The system shall correlate logs with traces for debugging. | Medium |
 
-### 4.3 Scalability
-* The architecture must rely on a horizontally scalable NoSQL store (e.g., ElasticSearch or MongoDB) for storing trace data.
+<mark>3.5 Automation & Advanced Features</mark>
+Description: Enterprise integrations and automation.
 
----
+| ID | Requirement | Priority |
+| :--- | :--- | :--- |
+| FR-16 | The system shall enforce governance policies and rules. | Medium |
+| FR-17 | The system shall create mocks for API simulation and support replay for scenario automation. | High |
+| FR-18 | The system shall manage secrets, workflows, and CI/CD integrations (Slack, PagerDuty, Prometheus). | Medium |
+| FR-19 | The system shall support GraphQL queries and gRPC interceptors. | Low |
 
-## 5. Interface Requirements
+**4. Non-Functional Requirements**
 
-### 5.1 User Interface (Dashboard)
-* **Trace Explorer:** A search interface to query requests by Method, Status, or Duration.
-* **Test Runner:** A UI to trigger regression suites and view Pass/Fail reports.
+   
+<mark>4.1 Performance</mark>
+Latency Overhead: Tracing middleware must add no more than 10ms latency.
+Throughput: Handle 1,000 requests/second per instance.
 
-### 5.2 External Interfaces
-* **CI/CD Integration:** The system shall provide a CLI tool to run tests within GitHub Actions or Jenkins.
-* **Alerting:** Integration with Slack/Email for test failures.
 
----
+<mark>4.2 Security & Privacy</mark>
+Data Sanitization: Automatic PII masking in logs and responses.
+Access Control: JWT-based auth with RBAC for workspace access.
 
-## 6. User Stories
 
-### 6.1 Debugging & Tracing
+<mark>4.3 Scalability</mark>
+Horizontally scalable with PostgreSQL; supports multiple environments (dev/staging/production).
 
+
+**5. Interface Requirements**
+
+   
+<mark>5.1 User Interface (Flutter Frontend)</mark>
+Screens: Auth, workspace setup, request studio, tracing config, monitoring, replay, secrets, etc.
+Dashboard: Trace explorer, test runner, collection management.
+
+
+<mark>5.2 External Interfaces</mark>
+Backend APIs: RESTful endpoints via Gin framework.
+Integrations: CLI for CI/CD, webhooks for alerts.
+
+
+**6. User Stories**
+
+<mark>6.1 Authentication & Organization</mark>
 | ID | User Story | Acceptance Criteria | Priority |
 | :--- | :--- | :--- | :--- |
-| **US-01** | **As a** Developer,<br>**I want to** see a visual graph of my API request,<br>**So that** I can identify which database query is slowing down the response. | 1. User views a Gantt-chart style trace.<br>2. Clicking a span shows the raw SQL query. | High |
-| **US-02** | **As a** Developer,<br>**I want to** replay a specific failed request locally,<br>**So that** I can debug it without reproducing the data setup manually. | 1. "Replay" button sends the exact same payload.<br>2. Mocks are used for DB calls. | High |
+| US-01 | As a user, I want to register/login securely, so I can access workspaces. | JWT tokens issued; bcrypt hashing used. | High |
+| US-02 | As an admin, I want to manage workspace members, so teams can collaborate. | RBAC enforced; members added/removed. | High |
 
-### 6.2 Automation
-
+<mark>6.2 API Testing & Tracing</mark>
 | ID | User Story | Acceptance Criteria | Priority |
 | :--- | :--- | :--- | :--- |
-| **US-03** | **As a** QA Engineer,<br>**I want to** convert live user traffic into a regression suite,<br>**So that** we have 100% test coverage of real-world scenarios. | 1. User selects a time range of traffic.<br>2. System generates a Test Suite file.<br>3. Tests pass/fail based on response diffs. | High |
-| **US-04** | **As a** DevOps Engineer,<br>**I want to** filter out noise (like Dates/UUIDs) from tests,<br>**So that** tests don't fail falsely due to dynamic data. | 1. System suggests fields to ignore.<br>2. User can mark fields as "wildcards". | Medium |
+| US-03 | As a developer, I want to build and execute API requests, so I can test endpoints. | Request builder UI; real-time execution with response capture. | High |
+| US-04 | As a developer, I want to view distributed traces, so I can debug slow requests. | Flame graph visualization; span details shown. | High |
 
----
+<mark>6.3 Automation</mark>
+| ID | User Story | Acceptance Criteria | Priority |
+| :--- | :--- | :--- | :--- |
+| US-05 | As a QA engineer, I want to replay captured traffic, so I can run regressions. | Replay service executes scenarios; mocks dependencies. | High |
+| US-06 | As a DevOps engineer, I want to integrate with Slack, so alerts are sent for failures. | Webhooks trigger notifications. | Medium |
 
-## 7. Appendices
-* **Appendix A:** Architecture Diagram (Agent vs. Server)
-* **Appendix B:** Installation Guide (Docker Compose)
-* **Appendix C:** CLI Command Reference
+**7. Appendices**
+
+Appendix A: Architecture Diagram (Go backend with handlers/services, Flutter frontend).<br>
+Appendix B: Installation Guide (Docker Compose for backend, Flutter setup for frontend).<br>
+Appendix C: File Structure (Backend: handlers/, services/, models/; Frontend: screens/, providers/).

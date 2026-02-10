@@ -19,7 +19,8 @@ func NewPrometheusIntegration(baseURL string) *PrometheusIntegration {
 	}
 }
 
-// QueryRange queries Prometheus for metrics in time range
+// QueryRange executes a Prometheus range query over a specified time window.
+// It queries the Prometheus HTTP API using the provided PromQL expression and returns a slice of metric points sampled at the given step interval.
 func (p *PrometheusIntegration) QueryRange(query string, start, end time.Time, step string) ([]MetricPoint, error) {
 	url := fmt.Sprintf("%s/api/v1/query_range?query=%s&start=%d&end=%d&step=%s",
 		p.baseURL, query, start.Unix(), end.Unix(), step)
@@ -67,7 +68,8 @@ type PrometheusResponse struct {
 	} `json:"data"`
 }
 
-// CorrelateWithTrace correlates metrics with trace timeline
+// CorrelateWithTrace retrieves time-series metrics associated with a specific trace and aligns them with the trace's execution window.
+// It queries Prometheus for commonly relevant resource and error metrics
 func (p *PrometheusIntegration) CorrelateWithTrace(traceID string, start, end time.Time) (map[string][]MetricPoint, error) {
 	metrics := map[string][]MetricPoint{}
 

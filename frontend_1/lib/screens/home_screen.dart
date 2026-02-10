@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/workspace_provider.dart';
-import '../providers/workspace_provider.dart';
 import '../providers/dashboard_provider.dart';
-import '../providers/navigation_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -242,39 +240,37 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.grey.shade900,
             ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 60),
           _buildTopNavItem('Dashboard', true),
           _buildTopNavItem('Workspaces', false),
           _buildTopNavItem('Collections', false),
           _buildTopNavItem('Monitors', false),
           const Spacer(),
-          Flexible(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 300),
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 16),
-                  Icon(Icons.search, size: 18, color: Colors.grey.shade500),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search APIs, requests, monitors...',
-                        hintStyle: TextStyle(
-                          color: Colors.grey.shade400,
-                          fontSize: 13,
-                        ),
-                        border: InputBorder.none,
+          Container(
+            width: 300,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 16),
+                Icon(Icons.search, size: 18, color: Colors.grey.shade500),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search APIs, requests, monitors...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 13,
                       ),
+                      border: InputBorder.none,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 20),
@@ -315,87 +311,60 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTopNavItem(String text, bool isActive) {
-    return InkWell(
-      onTap: () {
-        final nav = Provider.of<NavigationProvider>(context, listen: false);
-        switch (text) {
-          case 'Dashboard':
-            nav.navigateTo('HOME');
-            break;
-          case 'Workspaces':
-            nav.navigateTo('WORKSPACES');
-            break;
-          case 'Collections':
-            nav.navigateTo('COLLECTIONS');
-            break;
-          case 'Monitors':
-            nav.navigateTo('MONITORING');
-            break;
-        }
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                color: isActive ? Colors.grey.shade900 : Colors.grey.shade600,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+              color: isActive ? Colors.grey.shade900 : Colors.grey.shade600,
+            ),
+          ),
+          if (isActive) ...[
+            const SizedBox(height: 22),
+            Container(
+              height: 3,
+              width: 40,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade900,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            if (isActive) ...[
-              const SizedBox(height: 22),
-              Container(
-                height: 3,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade900,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildQuickActionButton(IconData icon, String? text) {
-    return InkWell(
-      onTap: () {
-        if (text == 'New Request') {
-           Provider.of<NavigationProvider>(context, listen: false).navigateTo('STUDIO');
-        }
-      },
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        height: 36,
-        padding: EdgeInsets.symmetric(horizontal: text != null ? 16 : 0),
-        width: text != null ? null : 36,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade900,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: Colors.white),
-            if (text != null) ...[
-              const SizedBox(width: 8),
-              Text(
-                text,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+    return Container(
+      height: 36,
+      padding: EdgeInsets.symmetric(horizontal: text != null ? 16 : 0),
+      width: text != null ? null : 36,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade900,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: Colors.white),
+          if (text != null) ...[
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

@@ -180,3 +180,68 @@ func contains(slice []string, item string) bool {
 	}
 	return false
 }
+
+// ServiceLatencyResult holds per-service latency and percentiles
+type ServiceLatencyResult struct {
+	ServiceName   string            `json:"service_name"`
+	Count         int               `json:"count"`
+	AvgDurationMs float64           `json:"avg_duration_ms"`
+	P50           float64           `json:"p50"`
+	P95           float64           `json:"p95"`
+	P99           float64           `json:"p99"`
+}
+
+// GetServiceLatencies returns span aggregation with percentiles per service
+func (s *MonitoringService) GetServiceLatencies(workspaceID, userID uuid.UUID, timeRange string) ([]ServiceLatencyResult, error) {
+	if !s.workspaceService.HasAccess(workspaceID, userID) {
+		return nil, errors.New("access denied")
+	}
+	var startTime time.Time
+	switch timeRange {
+	case "last_hour":
+		startTime = time.Now().Add(-1 * time.Hour)
+	case "last_24h":
+		startTime = time.Now().Add(-24 * time.Hour)
+	case "last_7d":
+		startTime = time.Now().Add(-7 * 24 * time.Hour)
+	case "last_30d":
+		startTime = time.Now().Add(-30 * 24 * time.Hour)
+	default:
+		startTime = time.Now().Add(-1 * time.Hour)
+	}
+
+	var spans []models.Span
+	s.db.Joins("JOIN traces ON traces.id = spans.trace_id").
+		Where("traces.workspace_id = ? AND spans.start_time >= ?", workspaceID, startTime).
+		Select("spans.service_name, spans.duration_ms").
+		Find(&spans)
+
+	// Aggregate by service
+	byService := make(map[string][]int64)
+	for _, span := range spans {
+		byService[span.ServiceName] = append(byService[span.ServiceName], int64(span.DurationMs))
+	}
+
+	calc := NewPercentileCalculator()
+	var results []ServiceLatencyResult
+	for name, durations := range byService {
+		var sum int64
+		for _, d := range durations {
+			sum += d
+		}
+		avg := 0.0
+		if len(durations) > 0 {
+			avg = float64(sum) / float64(len(durations))
+		}
+		pct := calc.CalculatePercentiles(durations, []float64{50, 95, 99})
+		results = append(results, ServiceLatencyResult{
+			ServiceName:   name,
+			Count:         len(durations),
+			AvgDurationMs: avg,
+			P50:           pct["p50"],
+			P95:           pct["p95"],
+			P99:           pct["p99"],
+		})
+	}
+	return results, nil
+}

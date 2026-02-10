@@ -33,11 +33,6 @@ class _AuthScreenState extends State<AuthScreen> {
       return;
     }
 
-    if (_passwordController.text.length < 6) {
-      _showError('Password must be at least 6 characters');
-      return;
-    }
-
     if (!isLogin && _nameController.text.isEmpty) {
       _showError('Please enter your name');
       return;

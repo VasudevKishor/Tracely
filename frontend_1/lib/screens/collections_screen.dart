@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/collection_provider.dart';
 import '../providers/workspace_provider.dart';
 import '../providers/auth_provider.dart';
-import '../providers/navigation_provider.dart';
 
 class CollectionsScreen extends StatefulWidget {
   const CollectionsScreen({Key? key}) : super(key: key);
@@ -342,10 +341,14 @@ class _CollectionsScreenState extends State<CollectionsScreen> {
             ),
           ),
           const SizedBox(width: 60),
-          _buildNavItem('Dashboard', false),
-          _buildNavItem('Workspaces', false),
-          _buildNavItem('Collections', true),
-          _buildNavItem('Monitors', false),
+          Text(
+            'Collections',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade900,
+            ),
+          ),
           const Spacer(),
           if (authProvider.isAuthenticated)
             IconButton(
@@ -623,54 +626,5 @@ class _CollectionsScreenState extends State<CollectionsScreen> {
     } catch (e) {
       return 'recently';
     }
-  }
-
-  Widget _buildNavItem(String text, bool isActive) {
-    return InkWell(
-      onTap: () {
-        final nav = Provider.of<NavigationProvider>(context, listen: false);
-        switch (text) {
-          case 'Dashboard':
-            nav.navigateTo('HOME');
-            break;
-          case 'Workspaces':
-            nav.navigateTo('WORKSPACES');
-            break;
-          case 'Collections':
-            nav.navigateTo('COLLECTIONS');
-            break;
-          case 'Monitors':
-            nav.navigateTo('MONITORING');
-            break;
-        }
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                color: isActive ? Colors.grey.shade900 : Colors.grey.shade600,
-              ),
-            ),
-            if (isActive) ...[
-              const SizedBox(height: 22),
-              Container(
-                height: 3,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade900,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 }

@@ -69,6 +69,21 @@ func (s *RequestService) GetByID(requestID, userID uuid.UUID) (*models.Request, 
 	return &request, nil
 }
 
+func (s *RequestService) GetByCollection(collectionID, userID uuid.UUID) ([]models.Request, error) {
+	var collection models.Collection
+	if err := s.db.First(&collection, collectionID).Error; err != nil {
+		return nil, err
+	}
+	if !s.workspaceService.HasAccess(collection.WorkspaceID, userID) {
+		return nil, errors.New("access denied")
+	}
+	var requests []models.Request
+	if err := s.db.Where("collection_id = ?", collectionID).Find(&requests).Error; err != nil {
+		return nil, err
+	}
+	return requests, nil
+}
+
 func (s *RequestService) Update(requestID, userID uuid.UUID, updates map[string]interface{}) (*models.Request, error) {
 	request, err := s.GetByID(requestID, userID)
 	if err != nil {

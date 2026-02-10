@@ -21,9 +21,6 @@ import 'providers/trace_provider.dart';
 import 'providers/environment_provider.dart';
 import 'providers/replay_provider.dart';
 import 'providers/request_provider.dart';
-import 'providers/navigation_provider.dart';
-
-import 'theme/app_theme.dart';
 
 void main() {
   runApp(
@@ -38,7 +35,6 @@ void main() {
         ChangeNotifierProvider(create: (_) => ReplayProvider()),
         ChangeNotifierProvider(create: (_) => RequestProvider()),
         ChangeNotifierProvider(create: (_) => EnvironmentProvider()),
-        ChangeNotifierProvider(create: (_) => NavigationProvider()),
       ],
       child: const TracelyApp(),
     ),
@@ -53,9 +49,15 @@ class TracelyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Tracely',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      theme: ThemeData(
+        fontFamily: 'SF Pro Display',
+        scaffoldBackgroundColor: const Color(0xFFFAFAFA),
+        colorScheme: ColorScheme.light(
+          primary: Colors.grey.shade900,
+          secondary: Colors.grey.shade700,
+          surface: Colors.white,
+        ),
+      ),
       home: const TracelyMainScreen(),
     );
   }
@@ -69,6 +71,8 @@ class TracelyMainScreen extends StatefulWidget {
 }
 
 class _TracelyMainScreenState extends State<TracelyMainScreen> {
+  int _currentScreen = 0;
+
   final List<Widget> _screens = [
     const LandingScreen(),
     const AuthScreen(),
@@ -99,13 +103,10 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final navigationProvider = Provider.of<NavigationProvider>(context);
-    final currentScreenIndex = navigationProvider.currentScreen;
-
     return Scaffold(
       body: Stack(
         children: [
-          _screens[currentScreenIndex],
+          _screens[_currentScreen],
 
           // Add this Floating button at bottom right for backend test
           Positioned(
@@ -203,7 +204,9 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
                         tooltip: 'Open navigation',
                         icon: Icon(Icons.menu, color: Colors.grey.shade300),
                         onSelected: (index) {
-                          navigationProvider.setScreen(index);
+                          setState(() {
+                            _currentScreen = index;
+                          });
                         },
                         itemBuilder: (context) {
                           return List.generate(_screenNames.length, (index) {

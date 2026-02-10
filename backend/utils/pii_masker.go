@@ -1,3 +1,9 @@
+/*
+Package utils contains utility functions and helpers.
+This file implements the PIIMasker, which is responsible for detecting and masking
+Personally Identifiable Information (PII) such as emails, phone numbers, SSNs, credit cards,
+API keys, bearer tokens, passwords, and sensitive headers in strings or JSON data.
+*/
 package utils
 
 import (
@@ -5,10 +11,14 @@ import (
 	"strings"
 )
 
+// PIIMasker is a utility struct that holds compiled regular expressions
+// for detecting various types of PII in text.
 type PIIMasker struct {
 	patterns map[string]*regexp.Regexp
 }
 
+// NewPIIMasker initializes a new PIIMasker with compiled regex patterns
+// for emails, phone numbers, SSNs, credit cards, IPs, API keys, bearer tokens, and passwords.
 func NewPIIMasker() *PIIMasker {
 	return &PIIMasker{
 		patterns: map[string]*regexp.Regexp{
@@ -24,7 +34,8 @@ func NewPIIMasker() *PIIMasker {
 	}
 }
 
-// MaskString masks PII in a string
+// MaskString masks PII in a given string using predefined regex patterns.
+// It replaces detected sensitive data with placeholder values (e.g., "***MASKED***").
 func (m *PIIMasker) MaskString(input string) string {
 	masked := input
 
@@ -34,10 +45,10 @@ func (m *PIIMasker) MaskString(input string) string {
 	// Mask phone numbers
 	masked = m.patterns["phone"].ReplaceAllString(masked, "***-***-****")
 
-	// Mask SSN
+	// Mask SSNs
 	masked = m.patterns["ssn"].ReplaceAllString(masked, "***-**-****")
 
-	// Mask credit cards
+	// Mask credit card numbers
 	masked = m.patterns["credit_card"].ReplaceAllString(masked, "****-****-****-****")
 
 	// Mask IP addresses
@@ -59,9 +70,10 @@ func (m *PIIMasker) MaskString(input string) string {
 	return masked
 }
 
-// MaskJSON masks PII in JSON strings
+// MaskJSON masks PII in JSON strings by targeting specific sensitive fields
+// such as password, API key, token, credit card number, or SSN, then applying MaskString.
 func (m *PIIMasker) MaskJSON(jsonStr string) string {
-	// Mask specific JSON fields
+	// List of sensitive fields to mask in JSON
 	sensitiveFields := []string{
 		"password", "passwd", "pwd",
 		"api_key", "apiKey", "apikey",
@@ -72,15 +84,16 @@ func (m *PIIMasker) MaskJSON(jsonStr string) string {
 
 	masked := jsonStr
 	for _, field := range sensitiveFields {
-		// Match "field": "value" or "field":"value"
+		// Match JSON key-value pairs like "field": "value" and mask the value
 		pattern := regexp.MustCompile(`"` + field + `"\s*:\s*"[^"]*"`)
 		masked = pattern.ReplaceAllString(masked, `"`+field+`":"***MASKED***"`)
 	}
 
+	// Additionally mask any PII present in the remaining string
 	return m.MaskString(masked)
 }
 
-// DetectPII detects if string contains PII
+// DetectPII checks if a string contains any PII and returns a list of detected types
 func (m *PIIMasker) DetectPII(input string) []string {
 	var detected []string
 
@@ -103,10 +116,12 @@ func (m *PIIMasker) DetectPII(input string) []string {
 	return detected
 }
 
-// MaskHeaders masks sensitive HTTP headers
+// MaskHeaders masks sensitive HTTP headers such as Authorization, API keys, and cookies.
+// For other headers, it still applies string-level PII masking.
 func (m *PIIMasker) MaskHeaders(headers map[string]string) map[string]string {
 	masked := make(map[string]string)
 
+	// List of headers considered sensitive
 	sensitiveHeaders := map[string]bool{
 		"authorization": true,
 		"x-api-key":     true,
@@ -115,11 +130,13 @@ func (m *PIIMasker) MaskHeaders(headers map[string]string) map[string]string {
 		"x-auth-token":  true,
 	}
 
+	// Iterate over headers and mask sensitive ones
 	for key, value := range headers {
 		lowerKey := strings.ToLower(key)
 		if sensitiveHeaders[lowerKey] {
 			masked[key] = "***MASKED***"
 		} else {
+			// Apply string-level PII masking for non-sensitive headers
 			masked[key] = m.MaskString(value)
 		}
 	}
