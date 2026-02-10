@@ -23,6 +23,8 @@ import 'providers/replay_provider.dart';
 import 'providers/request_provider.dart';
 import 'providers/navigation_provider.dart';
 
+import 'theme/app_theme.dart';
+
 void main() {
   runApp(
     MultiProvider(
@@ -51,15 +53,9 @@ class TracelyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Tracely',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'SF Pro Display',
-        scaffoldBackgroundColor: const Color(0xFFFAFAFA),
-        colorScheme: ColorScheme.light(
-          primary: Colors.grey.shade900,
-          secondary: Colors.grey.shade700,
-          surface: Colors.white,
-        ),
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
       home: const TracelyMainScreen(),
     );
   }
