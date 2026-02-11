@@ -24,6 +24,7 @@ func NewTraceService(db *gorm.DB) *TraceService {
 
 func (s *TraceService) CreateTrace(workspaceID uuid.UUID, serviceName string, status string) (*models.Trace, error) {
 	trace := models.Trace{
+		ID:          uuid.New(),
 		WorkspaceID: workspaceID,
 		ServiceName: serviceName,
 		StartTime:   time.Now(),
@@ -42,6 +43,7 @@ func (s *TraceService) AddSpan(traceID uuid.UUID, parentSpanID *uuid.UUID, opera
 	logsJSON, _ := json.Marshal(logs)
 
 	span := models.Span{
+		ID:            uuid.New(),
 		TraceID:       traceID,
 		ParentSpanID:  parentSpanID,
 		OperationName: operationName,
@@ -113,6 +115,7 @@ func (s *TraceService) GetTraceDetails(traceID, userID uuid.UUID) (*models.Trace
 
 func (s *TraceService) AddAnnotation(spanID, userID uuid.UUID, comment string, highlight bool) (*models.Annotation, error) {
 	annotation := models.Annotation{
+		ID:        uuid.New(),
 		SpanID:    spanID,
 		UserID:    userID,
 		Comment:   comment,
