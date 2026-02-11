@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+
 import 'package:tracely/app.dart';
 import 'package:tracely/core/theme/app_theme.dart';
 import 'package:tracely/core/providers/app_providers.dart';
 import 'package:tracely/core/providers/theme_mode_provider.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables – wrapped in try/catch so the app
+  // still launches even if the file is missing or malformed.
+  try {
+    await dotenv.load(fileName: 'assets/env.default');
+  } catch (e) {
+    debugPrint('⚠️ Could not load env.default: $e  (using defaults)');
+  }
+
   runApp(const TracelyApp());
 }
 
@@ -24,7 +36,7 @@ class TracelyApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: themeProvider.themeMode,
-            home: const AppShell(),
+            home: const AuthGate(),
           );
         },
       ),

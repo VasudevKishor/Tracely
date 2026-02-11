@@ -1,12 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tracely/core/providers/auth_provider.dart';
 import 'package:tracely/core/providers/theme_mode_provider.dart';
 import 'package:tracely/core/widgets/confirmation_dialog.dart';
-import 'package:tracely/screens/auth/login_screen.dart';
 import 'package:tracely/screens/logs/logs_screen.dart';
+import 'package:tracely/services/api_service.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _isLoading = true;
+  String _email = 'Loading...';
+  String _accountId = '';
+  bool _notificationsEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final data = await ApiService().getUserSettings();
+      if (!mounted) return;
+      setState(() {
+        _email = data['email'] ?? 'user@example.com';
+        _accountId = data['user_id'] ?? data['id'] ?? '';
+        _notificationsEnabled = data['notifications_enabled'] ?? true;
+
+        // Sync theme from server if present
+        final serverTheme = data['theme'];
+        if (serverTheme != null) {
+          final provider =
+              Provider.of<ThemeModeProvider>(context, listen: false);
+          if (serverTheme == 'dark' && !provider.isDarkMode) {
+            provider.setThemeMode(ThemeMode.dark);
+          } else if (serverTheme == 'light' && provider.isDarkMode) {
+            provider.setThemeMode(ThemeMode.light);
+          }
+        }
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveNotifications(bool value) async {
+    setState(() => _notificationsEnabled = value);
+    try {
+      await ApiService()
+          .updateUserSettings({'notifications_enabled': value});
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +81,14 @@ class SettingsScreen extends StatelessWidget {
                     trailing: Consumer<ThemeModeProvider>(
                       builder: (context, provider, _) => Switch(
                         value: provider.isDarkMode,
-                        onChanged: (_) => provider.toggleTheme(),
+                        onChanged: (_) {
+                          provider.toggleTheme();
+                          // Sync to backend
+                          ApiService().updateUserSettings({
+                            'theme':
+                                provider.isDarkMode ? 'dark' : 'light',
+                          });
+                        },
                       ),
                     ),
                     subtitle: 'Default: On',
@@ -43,8 +103,8 @@ class SettingsScreen extends StatelessWidget {
                     icon: Icons.notifications_rounded,
                     title: 'Push Notifications',
                     trailing: Switch(
-                      value: true,
-                      onChanged: (_) {},
+                      value: _notificationsEnabled,
+                      onChanged: _saveNotifications,
                     ),
                   ),
                 ],
@@ -56,13 +116,16 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsTile(
                     icon: Icons.person_rounded,
                     title: 'Email',
-                    subtitle: 'user@example.com',
+                    subtitle: _isLoading ? 'Loading...' : _email,
                   ),
-                  _SettingsTile(
-                    icon: Icons.badge_rounded,
-                    title: 'Account ID',
-                    subtitle: 'acc_xxxxxxxx',
-                  ),
+                  if (_accountId.isNotEmpty)
+                    _SettingsTile(
+                      icon: Icons.badge_rounded,
+                      title: 'Account ID',
+                      subtitle: _accountId.length > 12
+                          ? '${_accountId.substring(0, 12)}...'
+                          : _accountId,
+                    ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -73,7 +136,8 @@ class SettingsScreen extends StatelessWidget {
                     icon: Icons.description_rounded,
                     title: 'View Logs',
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const LogsScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const LogsScreen()),
                     ),
                   ),
                 ],
@@ -96,10 +160,7 @@ class SettingsScreen extends StatelessWidget {
                         isDestructive: true,
                       );
                       if (confirmed == true && context.mounted) {
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(builder: (_) => const LoginScreen()),
-                          (_) => false,
-                        );
+                        await context.read<AuthProvider>().logout();
                       }
                     },
                   ),
