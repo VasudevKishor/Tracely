@@ -24,63 +24,74 @@ func setupWorkspaceTestDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
 
 func TestWorkspaceService_Create(t *testing.T) {
 	db, mock := setupWorkspaceTestDB(t)
+	// MUST be false because GORM preload order is non-deterministic
+	mock.MatchExpectationsInOrder(false)
+
 	service := NewWorkspaceService(db)
 
 	ownerID := uuid.New()
 	workspaceID := uuid.New()
 	name := "Test Workspace"
 	desc := "Testing description"
+	wsType := "internal"
+	isPublic := false
+	accessType := "team"
 
-	// 1. Expect Workspace Creation - EXACTLY 6 ARGS
+	// 1. Expect Workspace Creation
 	mock.ExpectBegin()
 	mock.ExpectQuery(`(?i)INSERT INTO "workspaces"`).
 		WithArgs(
-			name,             // 1
-			desc,             // 2
-			ownerID,          // 3
-			sqlmock.AnyArg(), // 4 created_at
-			sqlmock.AnyArg(), // 5 updated_at
-			nil,              // 6 deleted_at
+			name,
+			desc,
+			ownerID,          // owner_id (Struct order)
+			sqlmock.AnyArg(), // created_at
+			sqlmock.AnyArg(), // updated_at
+			nil,              // deleted_at
+			wsType,
+			isPublic,
+			accessType,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(workspaceID))
 	mock.ExpectCommit()
 
-	// 2. Expect Member Creation
+	// 2. Expect Member Creation (Owner as Admin)
 	mock.ExpectBegin()
 	mock.ExpectQuery(`(?i)INSERT INTO "workspace_members"`).
-		WithArgs(
-			workspaceID,
-			ownerID,
-			"admin",
-			sqlmock.AnyArg(),
-			nil,
-		).
-		// CHANGE THIS LINE: Use a UUID instead of the integer 1
+		WithArgs(workspaceID, ownerID, "admin", sqlmock.AnyArg(), nil).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
 	mock.ExpectCommit()
 
-	// 3. Expect Final Preloaded Fetch (The First() call)
-	// Note: GORM uses (ID, 1) or (ID, ID, 1) depending on its mood.
-	// Let's use AnyArg to be safe.
+	// 3. Expect Main Workspace Fetch
 	mock.ExpectQuery(`(?i)SELECT \* FROM "workspaces" WHERE .*id.* = \$1`).
-		WithArgs(workspaceID, sqlmock.AnyArg()).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "owner_id"}).AddRow(workspaceID, name, ownerID))
+		WithArgs(workspaceID, workspaceID, sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "name", "description", "type", "is_public", "access_type", "owner_id",
+		}).AddRow(workspaceID, name, desc, wsType, isPublic, accessType, ownerID))
 
-	// Preload Owner
-	mock.ExpectQuery(`(?i)SELECT \* FROM "users" WHERE "users"."id" = \$1`).
-		WithArgs(ownerID).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "email"}).AddRow(ownerID, "owner@test.com"))
-
-	// Preload Members
-	mock.ExpectQuery(`(?i)SELECT \* FROM "workspace_members" WHERE "workspace_members"."workspace_id" = \$1`).
+	// 4. Preload Members
+	mock.ExpectQuery(`(?i)SELECT \* FROM "workspace_members" WHERE .*workspace_id.* = \$1`).
 		WithArgs(workspaceID).
 		WillReturnRows(sqlmock.NewRows([]string{"workspace_id", "user_id"}).AddRow(workspaceID, ownerID))
 
-	result, err := service.Create(name, desc, ownerID)
+	// 5. Preload Users (Matched twice for Owner and Members.User)
+	// We use a very broad regex '(?i)SELECT \* FROM "users" WHERE .*id.*'
+	// to match both "=" and "IN" syntaxes.
+	mock.ExpectQuery(`(?i)SELECT \* FROM "users" WHERE .*id.*`).
+		WithArgs(ownerID).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "email"}).AddRow(ownerID, "owner@test.com"))
 
+	mock.ExpectQuery(`(?i)SELECT \* FROM "users" WHERE .*id.*`).
+		WithArgs(ownerID).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "email"}).AddRow(ownerID, "owner@test.com"))
+
+	// EXECUTE
+	result, err := service.Create(name, desc, wsType, isPublic, accessType, ownerID)
+
+	// ASSERTIONS
 	assert.NoError(t, err)
 	if assert.NotNil(t, result) {
 		assert.Equal(t, name, result.Name)
+		assert.Equal(t, wsType, result.Type)
 	}
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

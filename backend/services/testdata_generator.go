@@ -111,7 +111,7 @@ func (g *TestDataGenerator) generateArray(schema map[string]interface{}) []inter
 // generateString generates a string based on schema constraints.
 // Supports formats (email, date, UUID, URI, IPv4), enum values, or min/max lengths.
 func (g *TestDataGenerator) generateString(schema map[string]interface{}) string {
-	// Check for specific format
+	// 1. Check for specific formats (email, date, etc.)
 	if format, ok := schema["format"].(string); ok {
 		switch format {
 		case "email":
@@ -129,12 +129,12 @@ func (g *TestDataGenerator) generateString(schema map[string]interface{}) string
 		}
 	}
 
-	// Check for enum
-	if enum, ok := schema["enum"].([]interface{}); ok {
+	// 2. Check for enum values
+	if enum, ok := schema["enum"].([]interface{}); ok && len(enum) > 0 {
 		return enum[rand.Intn(len(enum))].(string)
 	}
 
-	// Default random string
+	// 3. Default random string logic
 	minLength := 5
 	maxLength := 20
 	if min, ok := schema["minLength"].(float64); ok {
@@ -144,7 +144,18 @@ func (g *TestDataGenerator) generateString(schema map[string]interface{}) string
 		maxLength = int(max)
 	}
 
-	return gofakeit.LetterN(uint(minLength + rand.Intn(maxLength-minLength+1)))
+	// --- ADD THE SAFETY CHECK HERE ---
+	if minLength > maxLength {
+		minLength, maxLength = maxLength, minLength // Swap to prevent rand.Intn panic
+	}
+
+	count := uint(minLength)
+	if maxLength > minLength {
+		// rand.Intn(n) requires n > 0. (maxLength - minLength + 1) is now safe.
+		count = uint(minLength + rand.Intn(maxLength-minLength+1))
+	}
+
+	return gofakeit.LetterN(count)
 }
 
 // generateInteger generates a random integer within min/max constraints if specified.

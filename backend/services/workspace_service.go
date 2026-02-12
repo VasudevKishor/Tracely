@@ -16,10 +16,14 @@ func NewWorkspaceService(db *gorm.DB) *WorkspaceService {
 	return &WorkspaceService{db: db}
 }
 
-func (s *WorkspaceService) Create(name, description string, ownerID uuid.UUID) (*models.Workspace, error) {
+// Create updated to accept the new fields from the multi-step form
+func (s *WorkspaceService) Create(name, description, wsType string, isPublic bool, accessType string, ownerID uuid.UUID) (*models.Workspace, error) {
 	workspace := models.Workspace{
 		Name:        name,
 		Description: description,
+		Type:        wsType,
+		IsPublic:    isPublic,
+		AccessType:  accessType,
 		OwnerID:     ownerID,
 	}
 
@@ -36,6 +40,7 @@ func (s *WorkspaceService) Create(name, description string, ownerID uuid.UUID) (
 	if err := s.db.Create(&member).Error; err != nil {
 		return nil, err
 	}
+
 	if err := s.db.
 		Preload("Owner").
 		Preload("Members").

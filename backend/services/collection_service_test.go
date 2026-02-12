@@ -38,9 +38,10 @@ func TestNewCollectionService(t *testing.T) {
 }
 
 func TestCollectionService_Create_Success(t *testing.T) {
+
 	tests.SetupTestEnvironment(t)
 	defer tests.CleanupTestEnvironment(t)
-
+	// ARRANGE - Set up test data
 	db, mock := setupTestDBCollection(t)
 	service := NewCollectionService(db)
 
@@ -49,12 +50,12 @@ func TestCollectionService_Create_Success(t *testing.T) {
 	name := "Test Collection"
 	description := "Test Description"
 
-	// 1. FIX: GORM calls count(*) for access checks. Use regex wildcard for deleted_at.
+	// 1.GORM calls count(*) for access checks. Use regex wildcard for deleted_at.
 	mock.ExpectQuery(`SELECT count\(\*\) FROM "workspace_members" WHERE (.+)workspace_id = \$1 AND user_id = \$2`).
 		WithArgs(workspaceID, userID).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
-	// 2. FIX: Since ID is auto-gen UUID, GORM uses RETURNING "id". Use ExpectQuery.
+	// 2. Since ID is auto-gen UUID, GORM uses RETURNING "id". Use ExpectQuery.
 	mock.ExpectBegin()
 	mock.ExpectQuery(`INSERT INTO "collections"`).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
