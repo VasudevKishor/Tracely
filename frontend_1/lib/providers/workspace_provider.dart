@@ -50,6 +50,11 @@ class WorkspaceProvider with ChangeNotifier {
     _selectedWorkspaceId = workspaceId;
     notifyListeners();
   }
+
+  void setSelectedWorkspace(Map<String, dynamic> workspace) {
+    _selectedWorkspaceId = workspace['id'];
+    notifyListeners();
+  }
   
   // Enhanced createWorkspace method for multi-step form
   Future<bool> createWorkspace({
@@ -143,7 +148,7 @@ class WorkspaceProvider with ChangeNotifier {
       await _apiService.deleteWorkspace(workspaceId);
       
       // Remove from local list
-      _workspaces.removeWhere((w) => w['id'] == workspaceId);
+      _workspaces.removeWhere((w) => w['id'].toString() == workspaceId.toString());
       
       // If deleted workspace was selected, select first available or null
       if (_selectedWorkspaceId == workspaceId) {
@@ -164,5 +169,38 @@ class WorkspaceProvider with ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  // Initialize workspace with template defaults
+  Future<bool> initializeWorkspace({
+    required int templateId,
+    required String name,
+    String? description,
+  }) async {
+    try {
+      _errorMessage = null;
+      _isLoading = true;
+      notifyListeners();
+
+      // Use the new initializeWorkspace API method
+      final workspace = await _apiService.initializeWorkspace(
+        name,
+        description: description,
+        templateId: templateId,
+      );
+
+      // Add to workspaces list and set as selected
+      _workspaces.add(workspace);
+      _selectedWorkspaceId = workspace['id'].toString();
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 }

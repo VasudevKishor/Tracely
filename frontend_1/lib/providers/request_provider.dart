@@ -1,7 +1,5 @@
-// request_provider.dart
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'dart:async';
 import '../services/api_service.dart';
 
 class RequestProvider extends ChangeNotifier {
@@ -18,8 +16,19 @@ class RequestProvider extends ChangeNotifier {
   Map<String, dynamic>? get lastRequest => _lastRequest;
   String? get error => _error;
   List<Map<String, dynamic>> get history => _history;
-  
-  // Execute API request
+
+  // Properties for request data
+  String _method = 'GET';
+  String _url = '';
+  Map<String, String> _headers = {};
+  String _body = '';
+
+  // Getters for request data
+  String get method => _method;
+  String get url => _url;
+  Map<String, String> get headers => _headers;
+  String get body => _body;
+
   Future<Map<String, dynamic>> executeRequest({
     required String method,
     required String url,
@@ -28,217 +37,144 @@ class RequestProvider extends ChangeNotifier {
     Map<String, dynamic>? queryParams,
     String? workspaceId,
     String? collectionId,
+    String? requestId,
+    String? overrideUrl,
+    Map<String, String>? overrideHeaders,
   }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
-      // Prepare request data
-      final requestData = {
+      final requestTimestamp = DateTime.now();
+      Map<String, dynamic> responseInfo;
+
+      // MODE A: Backend Execution (via Go service)
+      if (requestId != null && workspaceId != null) {
+        responseInfo = await _apiService.executeRequest(
+          workspaceId,
+          requestId,
+          overrideUrl: overrideUrl,
+          overrideHeaders: overrideHeaders,
+        );
+      } 
+      // MODE B: Direct Execution (local HTTP)
+      else {
+        responseInfo = await _apiService.sendDirectRequest(
+          method: method,
+          url: overrideUrl ?? url,
+          body: body,
+          headers: headers,
+          queryParams: queryParams,
+        );
+      }
+
+      _lastResponse = responseInfo;
+      _lastRequest = {
         'method': method,
         'url': url,
-        'body': body,
-        'headers': headers ?? {},
-        'query_params': queryParams ?? {},
-        'workspace_id': workspaceId,
-        'collection_id': collectionId,
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': requestTimestamp.toIso8601String(),
       };
-      
-      _lastRequest = requestData;
-      
-      // Add to history
-      _history.insert(0, {
-        ...requestData,
-        'id': DateTime.now().millisecondsSinceEpoch.toString(),
-      });
-      
-      // Limit history to 50 items
-      if (_history.length > 50) {
-        _history = _history.sublist(0, 50);
-      }
-      
-      // Execute the HTTP request
-      http.Response response;
-      
-      // Build the full URL with query parameters
-      String finalUrl = url;
-      if (queryParams != null && queryParams.isNotEmpty) {
-        final uri = Uri.parse(url);
-        final queryParameters = Map<String, String>.from(
-          queryParams.map((key, value) => MapEntry(key, value.toString()))
+
+      _addToHistory(_lastRequest!, responseInfo);
+
+      // Auto-save to backend if it's a new request in a collection
+      if (workspaceId != null && collectionId != null && requestId == null) {
+        // We don't 'await' this so the UI updates immediately
+        _saveRequestToBackend(
+          workspaceId: workspaceId,
+          collectionId: collectionId,
+          method: method,
+          url: url,
+          body: body,
+          headers: headers,
+          queryParams: queryParams,
+          responseInfo: responseInfo,
         );
-        finalUrl = uri.replace(queryParameters: queryParameters).toString();
       }
-      
-      // Prepare request body
-      String? requestBody;
-      if (body != null) {
-        requestBody = json.encode(body);
-      }
-      
-      // Prepare headers
-      final requestHeaders = <String, String>{
-        'Content-Type': 'application/json',
-        ...?headers,
-      };
-      
-      // Add authorization header if available
-      if (_apiService.accessToken != null) {
-        requestHeaders['Authorization'] = 'Bearer ${_apiService.accessToken}';
-      }
-      
-      // Execute based on method
-      switch (method.toUpperCase()) {
-        case 'GET':
-          response = await http.get(
-            Uri.parse(finalUrl),
-            headers: requestHeaders,
-          );
-          break;
-        case 'POST':
-          response = await http.post(
-            Uri.parse(finalUrl),
-            headers: requestHeaders,
-            body: requestBody,
-          );
-          break;
-        case 'PUT':
-          response = await http.put(
-            Uri.parse(finalUrl),
-            headers: requestHeaders,
-            body: requestBody,
-          );
-          break;
-        case 'DELETE':
-          response = await http.delete(
-            Uri.parse(finalUrl),
-            headers: requestHeaders,
-          );
-          break;
-        case 'PATCH':
-          response = await http.patch(
-            Uri.parse(finalUrl),
-            headers: requestHeaders,
-            body: requestBody,
-          );
-          break;
-        default:
-          throw Exception('Unsupported HTTP method: $method');
-      }
-      
-      // Parse response
-      Map<String, dynamic> responseData = {};
-      
-      if (response.body.isNotEmpty) {
-        try {
-          responseData = json.decode(response.body);
-        } catch (e) {
-          responseData = {
-            'body': response.body,
-            'is_raw': true,
-          };
-        }
-      }
-      
-      final responseInfo = {
-        'status': response.statusCode,
-        'status_text': _getStatusText(response.statusCode),
-        'headers': response.headers,
-        'body': responseData,
-        'size': response.contentLength ?? response.body.length,
-        'time': DateTime.now().toIso8601String(),
-      };
-      
-      _lastResponse = responseInfo;
-      
-      // Save to backend if workspace and collection are provided
-      if (workspaceId != null && collectionId != null) {
-        try {
-          await _apiService.createRequest(
-            workspaceId,
-            collectionId,
-            {
-              'method': method,
-              'url': url,
-              'body': body,
-              'headers': headers ?? {},
-              'query_params': queryParams ?? {},
-              'response': responseInfo,
-              'name': _generateRequestName(url),
-            },
-          );
-        } catch (e) {
-          // Log but don't fail the request
-          print('Failed to save request to backend: $e');
-        }
-      }
-      
-      notifyListeners();
+
       return responseInfo;
-      
     } catch (e) {
       _error = e.toString();
-      _lastResponse = {
-        'status': 0,
-        'status_text': 'Error',
-        'error': e.toString(),
-        'time': DateTime.now().toIso8601String(),
-      };
-      notifyListeners();
       rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
-  
-  String _getStatusText(int statusCode) {
-    if (statusCode >= 200 && statusCode < 300) return 'OK';
-    if (statusCode >= 300 && statusCode < 400) return 'Redirect';
-    if (statusCode >= 400 && statusCode < 500) return 'Client Error';
-    if (statusCode >= 500) return 'Server Error';
-    return 'Unknown';
+
+  void _addToHistory(Map<String, dynamic> req, Map<String, dynamic> res) {
+    _history.insert(0, {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'method': req['method'],
+      'url': req['url'],
+      'status': res['status'],
+      'time': res['time'] ?? DateTime.now().toIso8601String(),
+    });
+    if (_history.length > 50) _history.removeLast();
   }
-  
-  String _generateRequestName(String url) {
+
+  Future<void> _saveRequestToBackend({
+    required String workspaceId,
+    required String collectionId,
+    required String method,
+    required String url,
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+    Map<String, dynamic>? queryParams,
+    required Map<String, dynamic> responseInfo,
+  }) async {
     try {
-      final uri = Uri.parse(url);
-      final path = uri.path;
-      if (path.isNotEmpty) {
-        final segments = path.split('/').where((s) => s.isNotEmpty).toList();
-        if (segments.isNotEmpty) {
-          return segments.last;
-        }
-      }
-      return 'Request to ${uri.host}';
+      await _apiService.createRequest(
+        workspaceId,
+        collectionId,
+        {
+          'method': method,
+          'url': url,
+          'body': body,
+          'headers': headers ?? {},
+          'query_params': queryParams ?? {},
+          'response': responseInfo,
+          'name': url.split('/').last.isEmpty ? 'New Request' : url.split('/').last,
+        },
+      );
     } catch (e) {
-      return 'Untitled Request';
+      debugPrint('Silent Background Save Failed: $e');
     }
   }
-  
-  // Clear last response
-  void clearResponse() {
-    _lastResponse = null;
+
+  // Setter methods for request data
+  void setMethod(String method) {
+    _method = method;
     notifyListeners();
   }
-  
-  // Clear error
-  void clearError() {
-    _error = null;
+
+  void setUrl(String url) {
+    _url = url;
     notifyListeners();
   }
-  
-  // Clear history
-  void clearHistory() {
-    _history.clear();
+
+  void setHeaders(Map<String, String> headers) {
+    _headers = headers;
     notifyListeners();
   }
-  
-  // Remove from history
-  void removeFromHistory(String id) {
-    _history.removeWhere((item) => item['id'] == id);
+
+  void setBody(String body) {
+    _body = body;
     notifyListeners();
   }
+
+  // Clear all request data
+  void clear() {
+    _method = 'GET';
+    _url = '';
+    _headers = {};
+    _body = '';
+    notifyListeners();
+  }
+
+  // Standard cleanup methods
+  void clearResponse() { _lastResponse = null; notifyListeners(); }
+  void clearError() { _error = null; notifyListeners(); }
+  void clearHistory() { _history.clear(); notifyListeners(); }
 }

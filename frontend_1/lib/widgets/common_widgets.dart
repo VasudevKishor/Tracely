@@ -6,16 +6,14 @@ class EmptyState extends StatelessWidget {
   final IconData icon;
   final String message;
   final String? description;
-  final VoidCallback? onAction;
-  final String? actionLabel;
+  final Widget? actionButton;
 
   const EmptyState({
     Key? key,
     required this.icon,
     required this.message,
     this.description,
-    this.onAction,
-    this.actionLabel,
+    this.actionButton,
   }) : super(key: key);
 
   @override
@@ -52,12 +50,9 @@ class EmptyState extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ],
-            if (onAction != null) ...[
+            if (actionButton != null) ...[
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: onAction,
-                child: Text(actionLabel ?? 'Get Started'),
-              ),
+              actionButton!,
             ],
           ],
         ),

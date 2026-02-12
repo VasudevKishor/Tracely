@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/workspace_provider.dart';
+import 'request_studio_screen.dart';
 
 class CreateWorkspaceScreen extends StatefulWidget {
   const CreateWorkspaceScreen({Key? key}) : super(key: key);
@@ -72,7 +73,7 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
     }
 
     final workspaceProvider = Provider.of<WorkspaceProvider>(context, listen: false);
-    
+
     try {
       await workspaceProvider.createWorkspace(
         name: _workspaceName,
@@ -92,7 +93,13 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
         ),
       );
 
-      Navigator.pop(context);
+      // Navigate to RequestStudioScreen instead of just popping
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const RequestStudioScreen(),
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -295,89 +302,94 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
   }
 
   Widget _buildStep1() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section Title
-          Text(
-            'Workspace Details',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: _darkColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Give your workspace a name and choose its purpose',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Name Input
-          _buildInputSection(
-            icon: Icons.badge_outlined,
-            title: 'Workspace Name',
-            hintText: 'Enter a descriptive name',
-            child: TextField(
-              onChanged: (value) => setState(() => _workspaceName = value),
-              decoration: InputDecoration(
-                hintText: 'e.g., Development, Production, Marketing APIs',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: _borderColor),
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Section Title
+              Text(
+                'Workspace Details',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: _darkColor,
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: _primaryColor, width: 2),
-                ),
-                contentPadding: const EdgeInsets.all(16),
               ),
-              style: TextStyle(
-                fontSize: 16,
-                color: _darkColor,
-                fontWeight: FontWeight.w500,
+              const SizedBox(height: 8),
+              Text(
+                'Give your workspace a name and choose its purpose',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 32),
+              const SizedBox(height: 32),
 
-          // Type Selection
-          _buildInputSection(
-            icon: Icons.category_outlined,
-            title: 'Workspace Type',
-            hintText: 'Choose how this workspace will be used',
-            child: Column(
-              children: [
-                // Internal Option
-                _buildTypeOption(
-                  title: 'Internal Team',
-                  description: 'Build and test APIs within your organization',
-                  icon: Icons.groups_outlined,
-                  isSelected: _selectedType == WorkspaceType.internal,
-                  color: _primaryColor,
-                  onTap: () => setState(() => _selectedType = WorkspaceType.internal),
+              // Name Input
+              _buildInputSection(
+                icon: Icons.badge_outlined,
+                title: 'Workspace Name',
+                hintText: 'Enter a descriptive name',
+                child: TextField(
+                  onChanged: (value) => setState(() => _workspaceName = value),
+                  decoration: InputDecoration(
+                    hintText: 'e.g., Development, Production, Marketing APIs',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _borderColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _primaryColor, width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.all(16),
+                  ),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _darkColor,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-                const SizedBox(height: 16),
-                
-                // Partner Option
-                _buildTypeOption(
-                  title: 'Partner Collaboration',
-                  description: 'Share APIs securely with external partners',
-                  icon: Icons.handshake_outlined,
-                  isSelected: _selectedType == WorkspaceType.partner,
-                  color: _secondaryColor,
-                  onTap: () => setState(() => _selectedType = WorkspaceType.partner),
+              ),
+              const SizedBox(height: 32),
+
+              // Type Selection
+              _buildInputSection(
+                icon: Icons.category_outlined,
+                title: 'Workspace Type',
+                hintText: 'Choose how this workspace will be used',
+                child: Column(
+                  children: [
+                    // Internal Option
+                    _buildTypeOption(
+                      title: 'Internal Team',
+                      description: 'Build and test APIs within your organization',
+                      icon: Icons.groups_outlined,
+                      isSelected: _selectedType == WorkspaceType.internal,
+                      color: _primaryColor,
+                      onTap: () => setState(() => _selectedType = WorkspaceType.internal),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Partner Option
+                    _buildTypeOption(
+                      title: 'Partner Collaboration',
+                      description: 'Share APIs securely with external partners',
+                      icon: Icons.handshake_outlined,
+                      isSelected: _selectedType == WorkspaceType.partner,
+                      color: _secondaryColor,
+                      onTap: () => setState(() => _selectedType = WorkspaceType.partner),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -51,6 +51,51 @@ class CollectionProvider with ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> updateCollection(String workspaceId, String collectionId, String name, {String? description}) async {
+    try {
+      _errorMessage = null;
+      final collection = await _apiService.updateCollection(workspaceId, collectionId, name, description: description);
+      final index = _collections.indexWhere((c) => c['id'] == collectionId);
+      if (index != -1) {
+        _collections[index] = collection;
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteCollection(String workspaceId, String collectionId) async {
+    try {
+      _errorMessage = null;
+      await _apiService.deleteCollection(workspaceId, collectionId);
+      _collections.removeWhere((c) => c['id'] == collectionId);
+      if (_selectedCollection?['id'] == collectionId) {
+        _selectedCollection = null;
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getCollectionById(String workspaceId, String collectionId) async {
+    try {
+      _errorMessage = null;
+      final collection = await _apiService.getCollectionById(workspaceId, collectionId);
+      return collection;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      return null;
+    }
+  }
   
   void clearError() {
     _errorMessage = null;

@@ -1,56 +1,34 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
 
 class EnvironmentProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
-  
-  List<Map<String, dynamic>> _environments = [];
+
+  List<dynamic> _environments = [];
   Map<String, dynamic>? _selectedEnvironment;
-  List<Map<String, dynamic>> _variables = [];
-  List<Map<String, dynamic>> _secrets = [];
-  
+  List<dynamic> _variables = []; // For storing variables of the selected env
   bool _isLoading = false;
   String? _error;
 
-  List<Map<String, dynamic>> get environments => _environments;
+  // Getters
+  List<dynamic> get environments => _environments;
   Map<String, dynamic>? get selectedEnvironment => _selectedEnvironment;
-  List<Map<String, dynamic>> get variables => _variables;
-  List<Map<String, dynamic>> get secrets => _secrets;
+  List<dynamic> get variables => _variables;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Load environments for a workspace
+  /// Fetches all environments for a specific workspace
   Future<void> loadEnvironments(String workspaceId) async {
-    if (!_apiService.isAuthenticated) {
-      _error = 'Not authenticated';
-      notifyListeners();
-      return;
-    }
-
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final headers = {
-        'Content-Type': 'application/json',
-        if (_apiService.accessToken != null)
-          'Authorization': 'Bearer ${_apiService.accessToken}',
-      };
-
-      final response = await http.get(
-        Uri.parse('${ApiService.baseUrl}/workspaces/$workspaceId/environments'),
-        headers: headers,
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        _environments = List<Map<String, dynamic>>.from(data['environments'] ?? []);
-        _error = null;
-      } else {
-        _error = 'Failed to load environments: ${response.statusCode}';
+      _environments = await _apiService.getEnvironments(workspaceId);
+      
+      // Optional: Auto-select the first environment if none is selected
+      if (_environments.isNotEmpty && _selectedEnvironment == null) {
+        _selectedEnvironment = _environments.first;
       }
     } catch (e) {
       _error = 'Error loading environments: $e';
@@ -60,383 +38,130 @@ class EnvironmentProvider extends ChangeNotifier {
     }
   }
 
-  // Create environment
-  Future<bool> createEnvironment({
-    required String workspaceId,
-    required String name,
-    String type = 'development',
-    String? description,
-    bool isActive = true,
-  }) async {
-    if (!_apiService.isAuthenticated) {
-      _error = 'Not authenticated';
-      notifyListeners();
-      return false;
+  /// Selects an environment and fetches its specific variables
+  /// Selects an environment and fetches its specific variables
+  /// Now requires workspaceId to satisfy the ApiService requirements
+  void selectEnvironment(String workspaceId, Map<String, dynamic> environment) {
+    _selectedEnvironment = environment;
+    
+    // When an environment is selected, fetch its variables using both IDs
+    if (environment['id'] != null) {
+      loadVariables(workspaceId, environment['id'].toString());
     }
-
-    _isLoading = true;
-    _error = null;
     notifyListeners();
+  }
 
+  /// Fetches variables belonging to a specific environment
+  /// Now correctly accepts both positional arguments
+  Future<void> loadVariables(String workspaceId, String environmentId) async {
     try {
-      final headers = {
-        'Content-Type': 'application/json',
-        if (_apiService.accessToken != null)
-          'Authorization': 'Bearer ${_apiService.accessToken}',
-      };
-
-      final response = await http.post(
-        Uri.parse('${ApiService.baseUrl}/workspaces/$workspaceId/environments'),
-        headers: headers,
-        body: json.encode({
-          'name': name,
-          'type': type,
-          'description': description ?? '',
-          'is_active': isActive,
-        }),
+      final Map<String, dynamic> response = await _apiService.getEnvironmentVariables(
+        workspaceId, 
+        environmentId
       );
 
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-        _environments.add(data['environment']);
-        _error = null;
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _error = 'Failed to create environment: ${response.statusCode}';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _error = 'Error creating environment: $e';
-      _isLoading = false;
+      // Extract the list from the map response
+      // Replace 'variables' with 'data' if that's what your Go backend uses
+      _variables = response['variables'] ?? []; 
+      
       notifyListeners();
-      return false;
+    } catch (e) {
+      _error = 'Error loading variables: $e';
+      debugPrint(_error);
+      notifyListeners();
     }
   }
 
-  // Load variables for an environment
-  Future<void> loadVariables(String workspaceId, String environmentId) async {
-    if (!_apiService.isAuthenticated) {
-      _error = 'Not authenticated';
-      notifyListeners();
-      return;
-    }
-
+  /// Creates a new environment
+  Future<bool> createEnvironment({
+    required String workspaceId,
+    required String name,
+    required String type, 
+    String? description,
+    bool isActive = true,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final headers = {
-        'Content-Type': 'application/json',
-        if (_apiService.accessToken != null)
-          'Authorization': 'Bearer ${_apiService.accessToken}',
-      };
-
-      final response = await http.get(
-        Uri.parse('${ApiService.baseUrl}/workspaces/$workspaceId/environments/$environmentId'),
-        headers: headers,
+      final result = await _apiService.createEnvironment(
+        workspaceId, 
+        name, 
+        type, 
+        description: description, 
+        isActive: isActive
       );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        _variables = List<Map<String, dynamic>>.from(data['variables'] ?? []);
-        _secrets = List<Map<String, dynamic>>.from(data['secrets'] ?? []);
-        
-        // Find and set the selected environment
-        _selectedEnvironment = _environments.firstWhere(
-          (env) => env['id'] == environmentId,
-          orElse: () => {},
-        );
-        
-        _error = null;
-      } else {
-        _error = 'Failed to load variables: ${response.statusCode}';
-      }
+      
+      // Extract the environment object from response
+      final newEnv = result['environment'] ?? result;
+      _environments.add(newEnv);
+      
+      return true;
     } catch (e) {
-      _error = 'Error loading variables: $e';
+      _error = e.toString();
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Add variable to environment
+  /// Adds a new variable to the selected environment
   Future<bool> addVariable({
     required String workspaceId,
     required String environmentId,
     required String key,
     required String value,
-    String type = 'string',
+    required String type,
     String? description,
   }) async {
-    if (!_apiService.isAuthenticated) {
-      _error = 'Not authenticated';
-      notifyListeners();
-      return false;
-    }
-
     _isLoading = true;
-    _error = null;
     notifyListeners();
 
     try {
-      final headers = {
-        'Content-Type': 'application/json',
-        if (_apiService.accessToken != null)
-          'Authorization': 'Bearer ${_apiService.accessToken}',
-      };
-
-      final response = await http.post(
-        Uri.parse('${ApiService.baseUrl}/workspaces/$workspaceId/environments/$environmentId/variables'),
-        headers: headers,
-        body: json.encode({
-          'key': key,
-          'value': value,
-          'type': type,
-          'description': description ?? '',
-        }),
+      final result = await _apiService.addEnvironmentVariable(
+        workspaceId, environmentId, key, value, type: type, description: description
       );
-
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-        _variables.add(data['variable']);
-        _error = null;
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _error = 'Failed to add variable: ${response.statusCode}';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
+      
+      // Extract the variable object (adjust key based on your Go response)
+      final newVar = result['variable'] ?? result; 
+      _variables.add(newVar);
+      
+      return true;
     } catch (e) {
-      _error = 'Error adding variable: $e';
+      _error = e.toString();
+      return false;
+    } finally {
       _isLoading = false;
       notifyListeners();
-      return false;
     }
   }
 
-  // Update environment
-  Future<bool> updateEnvironment({
-    required String workspaceId,
-    required String environmentId,
-    String? name,
-    String? type,
-    String? description,
-    bool? isActive,
-  }) async {
-    if (!_apiService.isAuthenticated) {
-      _error = 'Not authenticated';
-      notifyListeners();
-      return false;
-    }
-
+  /// Deletes a variable from the selected environment
+  Future<bool> deleteVariable(String workspaceId, String environmentId, String variableId) async {
     _isLoading = true;
-    _error = null;
     notifyListeners();
 
     try {
-      final headers = {
-        'Content-Type': 'application/json',
-        if (_apiService.accessToken != null)
-          'Authorization': 'Bearer ${_apiService.accessToken}',
-      };
-
-      final response = await http.put(
-        Uri.parse('${ApiService.baseUrl}/workspaces/$workspaceId/environments/$environmentId'),
-        headers: headers,
-        body: json.encode({
-          if (name != null) 'name': name,
-          if (type != null) 'type': type,
-          if (description != null) 'description': description,
-          if (isActive != null) 'is_active': isActive,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        // Update in local list
-        final index = _environments.indexWhere((env) => env['id'] == environmentId);
-        if (index != -1) {
-          _environments[index] = data['environment'];
-        }
-        
-        // Update selected environment if it's the one being updated
-        if (_selectedEnvironment != null && _selectedEnvironment!['id'] == environmentId) {
-          _selectedEnvironment = data['environment'];
-        }
-        
-        _error = null;
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _error = 'Failed to update environment: ${response.statusCode}';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
+      await _apiService.deleteEnvironmentVariable(workspaceId, environmentId, variableId);
+      _variables.removeWhere((v) => v['id'] == variableId);
+      return true;
     } catch (e) {
-      _error = 'Error updating environment: $e';
+      _error = e.toString();
+      return false;
+    } finally {
       _isLoading = false;
       notifyListeners();
-      return false;
     }
   }
 
-  // Delete environment
-  Future<bool> deleteEnvironment(String workspaceId, String environmentId) async {
-    if (!_apiService.isAuthenticated) {
-      _error = 'Not authenticated';
-      notifyListeners();
-      return false;
-    }
-
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final headers = {
-        'Content-Type': 'application/json',
-        if (_apiService.accessToken != null)
-          'Authorization': 'Bearer ${_apiService.accessToken}',
-      };
-
-      final response = await http.delete(
-        Uri.parse('${ApiService.baseUrl}/workspaces/$workspaceId/environments/$environmentId'),
-        headers: headers,
-      );
-
-      if (response.statusCode == 200) {
-        _environments.removeWhere((env) => env['id'] == environmentId);
-        
-        if (_selectedEnvironment != null && _selectedEnvironment!['id'] == environmentId) {
-          _selectedEnvironment = null;
-          _variables.clear();
-          _secrets.clear();
-        }
-        
-        _error = null;
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _error = 'Failed to delete environment: ${response.statusCode}';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _error = 'Error deleting environment: $e';
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Select environment
-  Future<void> selectEnvironment(String workspaceId, Map<String, dynamic> environment) async {
-    _selectedEnvironment = environment;
-    await loadVariables(workspaceId, environment['id']);
-    notifyListeners();
-  }
-
-  // Clear selected environment
-  void clearSelectedEnvironment() {
+  /// Clears data on logout or workspace switch
+  void clear() {
+    _environments = [];
     _selectedEnvironment = null;
-    _variables.clear();
-    _secrets.clear();
-    notifyListeners();
-  }
-
-  // Clear error
-  void clearError() {
+    _variables = [];
     _error = null;
-    notifyListeners();
-  }
-
-  // Get environment variable value by key
-  String? getVariableValue(String key) {
-    final variable = _variables.firstWhere(
-      (v) => v['key'] == key,
-      orElse: () => {},
-    );
-    return variable.isNotEmpty ? variable['value'] : null;
-  }
-
-  // Get all variables as map
-  Map<String, String> getVariablesMap() {
-    final Map<String, String> map = {};
-    for (var variable in _variables) {
-      map[variable['key']] = variable['value'];
-    }
-    return map;
-  }
-
-  // Get all variables including secrets as map
-  Map<String, String> getAllVariablesMap() {
-    final Map<String, String> map = {};
-    
-    // Add regular variables
-    for (var variable in _variables) {
-      map[variable['key']] = variable['value'];
-    }
-    
-    // Add secrets (you might want to handle secrets differently)
-    for (var secret in _secrets) {
-      map[secret['key']] = secret['value'];
-    }
-    
-    return map;
-  }
-
-  // Check if a variable exists
-  bool hasVariable(String key) {
-    return _variables.any((v) => v['key'] == key);
-  }
-
-  // Update variable locally (useful for real-time editing)
-  void updateVariableLocally(String key, String value) {
-    final index = _variables.indexWhere((v) => v['key'] == key);
-    if (index != -1) {
-      _variables[index]['value'] = value;
-      notifyListeners();
-    }
-  }
-
-  // Add variable locally (useful for real-time editing)
-  void addVariableLocally(String key, String value, {String type = 'string', String description = ''}) {
-    _variables.add({
-      'key': key,
-      'value': value,
-      'type': type,
-      'description': description,
-    });
-    notifyListeners();
-  }
-
-  // Remove variable locally
-  void removeVariableLocally(String key) {
-    _variables.removeWhere((v) => v['key'] == key);
-    notifyListeners();
-  }
-
-  // Reset all data
-  void reset() {
-    _environments.clear();
-    _selectedEnvironment = null;
-    _variables.clear();
-    _secrets.clear();
-    _error = null;
-    _isLoading = false;
     notifyListeners();
   }
 }

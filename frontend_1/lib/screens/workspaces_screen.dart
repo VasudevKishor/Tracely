@@ -41,6 +41,49 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
     }
   }
 
+  Future<void> _showDeleteConfirmation(Map<String, dynamic> workspace) async {
+    return showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent accidental closing during API call
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Workspace'),
+        content: Text(
+            'Are you sure you want to delete "${workspace['name']}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              final provider = context.read<WorkspaceProvider>();
+              final success = await provider.deleteWorkspace(workspace['id'].toString());
+
+              if (mounted) {
+                Navigator.pop(context); // Close dialog
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? 'Workspace deleted'
+                        : (provider.errorMessage ?? 'Delete failed')),
+                    backgroundColor: success ? Colors.black : Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showCreateWorkspaceDialog() async {
     return showDialog(
       context: context,
@@ -370,10 +413,10 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
   Widget _buildWorkspacesTable(WorkspaceProvider provider) {
     // Filter workspaces based on search and filters
     final filteredWorkspaces = provider.workspaces.where((ws) {
-      final matchesSearch = _searchController.text.isEmpty ||
-          ws['name'].toString().toLowerCase().contains(_searchController.text.toLowerCase());
-      return matchesSearch;
-    }).toList();
+    final matchesSearch = _searchController.text.isEmpty ||
+        ws['name'].toString().toLowerCase().contains(_searchController.text.toLowerCase());
+    return matchesSearch;
+   }).toList();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 48),
@@ -424,12 +467,23 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
               ),
             ),
             Divider(height: 1, color: Colors.grey.shade200),
-            // Table rows
-            ...List.generate(filteredWorkspaces.length, (index) {
-              final workspace = filteredWorkspaces[index];
-              final isLast = index == filteredWorkspaces.length - 1;
-              return _buildWorkspaceRow(workspace, isLast);
-            }),
+
+            if (filteredWorkspaces.isEmpty && _searchController.text.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.all(48.0),
+                child: Center(
+                  child: Text(
+                    'No workspaces match your search.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              )
+            else
+              ...List.generate(filteredWorkspaces.length, (index) {
+                final workspace = filteredWorkspaces[index];
+                final isLast = index == filteredWorkspaces.length - 1;
+                return _buildWorkspaceRow(workspace, isLast);
+              }),
           ],
         ),
       ),
@@ -462,6 +516,10 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
 
     return InkWell(
       onTap: () {
+        //Use context.read<WorkspaceProvider>()
+        context.read<WorkspaceProvider>().setSelectedWorkspace(workspace);
+
+        // 2. Navigate
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -589,38 +647,52 @@ class _WorkspacesScreenState extends State<WorkspacesScreen> {
               ),
               const SizedBox(width: 8),
               // More options icon
-              PopupMenuButton(
+              PopupMenuButton<String>(
                 offset: const Offset(-10, 40),
+                tooltip: 'Show options',
+                onSelected: (String value) {
+                  switch (value) {
+                    case 'delete':
+                      _showDeleteConfirmation(workspace);
+                      break;
+                    case 'edit':
+                      // logic for edit
+                      break;
+                    case 'duplicate':
+                      // logic for duplicate
+                      break;
+                  }
+                },
                 itemBuilder: (context) => [
-                  PopupMenuItem(
-                    child: const Row(
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
                       children: [
                         Icon(Icons.edit, size: 16),
                         SizedBox(width: 8),
                         Text('Edit'),
                       ],
                     ),
-                    onTap: () {},
                   ),
-                  PopupMenuItem(
-                    child: const Row(
+                  const PopupMenuItem(
+                    value: 'duplicate',
+                    child: Row(
                       children: [
                         Icon(Icons.content_copy, size: 16),
                         SizedBox(width: 8),
                         Text('Duplicate'),
                       ],
                     ),
-                    onTap: () {},
                   ),
-                  PopupMenuItem(
-                    child: const Row(
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
                       children: [
                         Icon(Icons.delete, size: 16, color: Colors.red),
                         SizedBox(width: 8),
                         Text('Delete', style: TextStyle(color: Colors.red)),
                       ],
                     ),
-                    onTap: () {},
                   ),
                 ],
                 child: Icon(Icons.more_vert, size: 20, color: Colors.grey.shade600),

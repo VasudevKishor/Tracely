@@ -20,93 +20,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFFFAFAFA),
-      child: Column(
-        children: [
-          _buildTopBar(),
-          Expanded(
-            child: Row(
-              children: [
-                // Side Navigation
-                Container(
-                  width: 240,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border(right: BorderSide(color: Colors.grey.shade200)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(color: Colors.grey.shade200),
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
+        color: const Color(0xFFFAFAFA),
+        child: Column(
+          children: [
+            _buildTopBar(),
+            Expanded(
+              child: Row(
+                children: [
+                  // Side Navigation
+                  Container(
+                    width: 240,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(right: BorderSide(color: Colors.grey.shade200)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Colors.grey.shade200),
+                            ),
+                          ),
+                          child: Text(
+                            'Settings',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.grey.shade900,
+                            ),
                           ),
                         ),
-                        child: Text(
-                          'Settings',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade900,
-                          ),
-                        ),
-                      ),
-                      ...List.generate(tabs.length, (index) {
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedTab = index;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 16),
-                            decoration: BoxDecoration(
-                              color: selectedTab == index
-                                  ? Colors.grey.shade100
-                                  : Colors.transparent,
-                              border: Border(
-                                left: BorderSide(
+                        ...List.generate(tabs.length, (index) {
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedTab = index;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 16),
+                              decoration: BoxDecoration(
+                                color: selectedTab == index
+                                    ? Colors.grey.shade100
+                                    : Colors.transparent,
+                                border: Border(
+                                  left: BorderSide(
+                                    color: selectedTab == index
+                                        ? Colors.grey.shade900
+                                        : Colors.transparent,
+                                    width: 3,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                tabs[index],
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: selectedTab == index
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
                                   color: selectedTab == index
                                       ? Colors.grey.shade900
-                                      : Colors.transparent,
-                                  width: 3,
+                                      : Colors.grey.shade600,
                                 ),
                               ),
                             ),
-                            child: Text(
-                              tabs[index],
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: selectedTab == index
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                                color: selectedTab == index
-                                    ? Colors.grey.shade900
-                                    : Colors.grey.shade600,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ],
+                          );
+                        }),
+                      ],
+                    ),
                   ),
-                ),
 
-                // Content Area
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(40),
-                    child: _buildTabContent(),
+                  // Content Area
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(40),
+                      child: _buildTabContent(),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -150,6 +153,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildTabContent() {
+    // FIX: Add safety check for RangeError
+    if (selectedTab >= tabs.length) {
+      setState(() {
+        selectedTab = 0; // Reset to first tab if out of bounds
+      });
+      return const SizedBox();
+    }
+
     switch (selectedTab) {
       case 0:
         return _buildProfileSettings();

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 import 'screens/landing_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/workspaces_screen.dart';
 import 'screens/request_studio_screen.dart';
 import 'screens/collections_screen.dart';
-import 'screens/monitoring_screen.dart';
 import 'screens/governance_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/trace_screen.dart';
@@ -15,14 +15,25 @@ import 'providers/auth_provider.dart';
 import 'providers/workspace_provider.dart';
 import 'providers/collection_provider.dart';
 import 'providers/governance_provider.dart';
-import 'package:http/http.dart' as http;
 import 'providers/dashboard_provider.dart';
 import 'providers/trace_provider.dart';
 import 'providers/environment_provider.dart';
 import 'providers/replay_provider.dart';
 import 'providers/request_provider.dart';
+import 'services/api_service.dart';
+import 'providers/monitoring_provider.dart';
+import 'providers/schema_validator_provider.dart';
+import 'providers/settings_provider.dart';
+import 'providers/test_data_generator_provider.dart';
 
-void main() {
+
+void main() async { 
+  
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final apiService = ApiService();
+  await apiService.loadTokens();
+  
   runApp(
     MultiProvider(
       providers: [
@@ -35,6 +46,10 @@ void main() {
         ChangeNotifierProvider(create: (_) => ReplayProvider()),
         ChangeNotifierProvider(create: (_) => RequestProvider()),
         ChangeNotifierProvider(create: (_) => EnvironmentProvider()),
+        ChangeNotifierProvider(create: (_) => MonitoringProvider()),
+        ChangeNotifierProvider(create: (_) => SchemaValidatorProvider()),
+        ChangeNotifierProvider(create: (_) => TestDataGeneratorProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
       child: const TracelyApp(),
     ),
@@ -80,7 +95,6 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
     const WorkspacesScreen(),
     const RequestStudioScreen(),
     const CollectionsScreen(),
-    const MonitoringScreen(),
     const ReplayScreen(),
     const TracesScreen(),
     const GovernanceScreen(),
@@ -94,7 +108,6 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
     'WORKSPACES',
     'STUDIO',
     'COLLECTIONS',
-    'MONITORING',
     'REPLAY',
     'TRACING',
     'GOVERNANCE',
@@ -117,53 +130,56 @@ class _TracelyMainScreenState extends State<TracelyMainScreen> {
                 child: const Icon(Icons.cloud_done),
                 tooltip: 'Check Backend',
                 onPressed: () async {
-                  final authProvider =
-                      Provider.of<AuthProvider>(context, listen: false);
+                // Use the Singleton instance we initialized in main()
+                  final apiService = ApiService();
 
-                  if (!authProvider.isAuthenticated ||
-                      authProvider.user == null) {
+                  // 1. Check if the service has a valid token stored
+                  if (!apiService.isAuthenticated) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text('❌ You need to login first')),
-                    );
-                    return;
+                        content: Text('❌ You need to login first'),
+                        backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                  return;
+                }
+
+                try {
+                  // 2. Automatically get headers with the Bearer token
+                  final headers = await apiService.getRequestHeaders();
+
+                  // 3. Hit the workspaces endpoint as a health check
+                  final response = await http.get(
+                    Uri.parse('${ApiService.baseUrl}/workspaces'),
+                    headers: headers,
+                  );
+
+                  String message;
+                  if (response.statusCode == 200) {
+                    message = '✅ Backend is reachable & Session is active!';
+                  } else if (response.statusCode == 401) {
+                    message = '⚠️ Session expired or invalid. Please re-login.';
+                  } else {
+                    message = '⚠️ Backend error: Status ${response.statusCode}';
                   }
 
-                  try {
-                    final token = authProvider.user!['token']; // get JWT
-
-                    final response = await http.get(
-                      Uri.parse('http://localhost:8081/api/v1/workspaces'),
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer $token',
-                      },
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(message)),
                     );
-
-                    String message;
-                    if (response.statusCode == 200) {
-                      message = '✅ Backend is reachable!';
-                    } else if (response.statusCode == 401) {
-                      message = '⚠️ Unauthorized. Please login again.';
-                    } else {
-                      message =
-                          '⚠️ Backend returned status: ${response.statusCode}';
-                    }
-
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(message)),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('❌ Error connecting: $e')),
-                      );
-                    }
                   }
-                },
-              )),
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('❌ Connection failed: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            )),
 
           // Development navigation bar
           Positioned(

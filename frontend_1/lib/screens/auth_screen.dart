@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/workspace_provider.dart';
+import '../providers/settings_provider.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -57,7 +59,7 @@ class _AuthScreenState extends State<AuthScreen> {
           _passwordController.text,
           _nameController.text.trim(),
         );
-        
+
         if (success) {
           // Auto login after registration
           success = await authProvider.login(
@@ -68,9 +70,18 @@ class _AuthScreenState extends State<AuthScreen> {
       }
 
       if (success && mounted) {
+        // Hydrate app data immediately
+        final settingsProv = Provider.of<SettingsProvider>(context, listen: false);
+        final workspaceProv = Provider.of<WorkspaceProvider>(context, listen: false);
+
+        await Future.wait([
+          settingsProv.loadSettings(),
+          workspaceProv.loadWorkspaces(),
+        ]);
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isLogin ? 'Welcome back!' : 'Account created successfully!'),
+          const SnackBar(
+            content: Text('Authentication successful! Loading your environment...'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -79,13 +90,9 @@ class _AuthScreenState extends State<AuthScreen> {
         _showError(authProvider.errorMessage!);
       }
     } catch (e) {
-      if (mounted) {
-        _showError(e.toString());
-      }
+      if (mounted) _showError(e.toString());
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -181,22 +188,48 @@ class _AuthScreenState extends State<AuthScreen> {
               Expanded(
                 flex: 4,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 80,
-                    vertical: 40, // 
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        isLogin ? 'Welcome back' : 'Create account',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.grey.shade900,
+                  padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 40),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (authProvider.isAuthenticated)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 30),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                              ),
+                              child: Column(
+                                children: [
+                                  const Text(
+                                    "Session is active",
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // This button can be wired to your main.dart navigation logic
+                                    },
+                                    child: const Text("Go to Dashboard"),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                        Text(
+                          isLogin ? 'Welcome back' : 'Create account',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey.shade900,
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 8),
                       Text(
                         isLogin
@@ -317,7 +350,8 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
                         ),
                       ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

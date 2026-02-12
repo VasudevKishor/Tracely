@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../providers/workspace_provider.dart';
 import '../providers/collection_provider.dart';
 import '../providers/request_provider.dart';
+import '../providers/environment_provider.dart';
 
 class RequestStudioScreen extends StatefulWidget {
   const RequestStudioScreen({Key? key}) : super(key: key);
@@ -109,6 +110,23 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
     _floatingButtonAnimationController.repeat(reverse: true);
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final workspaceProvider = Provider.of<WorkspaceProvider>(context);
+    if (workspaceProvider.selectedWorkspaceId != null) {
+      // FIX: Wrap the calls so they trigger AFTER the build is done
+      Future.microtask(() {
+        Provider.of<CollectionProvider>(context, listen: false)
+            .loadCollections(workspaceProvider.selectedWorkspaceId!);
+      });
+      Future.microtask(() {
+        Provider.of<EnvironmentProvider>(context, listen: false)
+            .loadEnvironments(workspaceProvider.selectedWorkspaceId!);
+      });
+    }
+  }
+
   void _initializeControllers() {
     // Initialize query param controllers
     for (var param in _queryParams) {
@@ -201,23 +219,29 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
     final requestProvider = Provider.of<RequestProvider>(context, listen: false);
     final workspaceProvider = Provider.of<WorkspaceProvider>(context, listen: false);
     final collectionProvider = Provider.of<CollectionProvider>(context, listen: false);
-    
+    final environmentProvider = Provider.of<EnvironmentProvider>(context, listen: false);
+
     // Update query params from controllers
     for (int i = 0; i < _queryParams.length; i++) {
       _queryParams[i]['key'] = _queryParamKeyControllers[i].text;
       _queryParams[i]['value'] = _queryParamValueControllers[i].text;
       _queryParams[i]['description'] = _queryParamDescControllers[i].text;
     }
-    
+
     // Update headers from controllers
     for (int i = 0; i < _headers.length; i++) {
       _headers[i]['key'] = _headerKeyControllers[i].text;
       _headers[i]['value'] = _headerValueControllers[i].text;
       _headers[i]['description'] = _headerDescControllers[i].text;
     }
-    
-    // Build query parameters
+
+    // Prepare data from controllers
+    String url = _urlController.text.trim();
+    Map<String, String> headers = {};
     Map<String, dynamic> queryParams = {};
+    String bodyText = _bodyController.text.trim();
+
+    // Build query parameters
     for (var param in _queryParams) {
       final key = (param['key'] as String).trim();
       final value = (param['value'] as String).trim();
@@ -225,9 +249,8 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
         queryParams[key] = value;
       }
     }
-    
+
     // Build headers
-    Map<String, String> headers = {};
     for (var header in _headers) {
       final key = (header['key'] as String).trim();
       final value = (header['value'] as String).trim();
@@ -235,39 +258,48 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
         headers[key] = value;
       }
     }
-    
+
+    // Substitute environment variables if environment is selected
+    if (selectedEnvironment != 'No Environment' && environmentProvider.selectedEnvironment != null) {
+      final variables = environmentProvider.variables;
+      url = _substituteVariables(url, variables);
+      headers = _substituteVariablesInMap(headers.cast<String, dynamic>(), variables).cast<String, String>();
+      queryParams = _substituteVariablesInMap(queryParams, variables);
+      bodyText = _substituteVariables(bodyText, variables);
+    }
+
     // Parse body if provided
     Map<String, dynamic>? body;
-    if (selectedTab == 1 && _bodyController.text.trim().isNotEmpty) {
+    if (selectedTab == 1 && bodyText.isNotEmpty) {
       try {
-        body = json.decode(_bodyController.text);
+        body = json.decode(bodyText);
       } catch (e) {
-        body = {'raw': _bodyController.text};
+        body = {'raw': bodyText};
       }
     }
-    
+
     try {
       await requestProvider.executeRequest(
         method: selectedMethod,
-        url: _urlController.text.trim(),
+        url: url,
         body: body,
-        headers: headers,
+        headers: headers.cast<String, String>(),
         queryParams: queryParams,
         workspaceId: workspaceProvider.selectedWorkspaceId,
         collectionId: collectionProvider.selectedCollection?['id'],
       );
-      
+
       setState(() {
         responseView = 'JSON';
       });
-      
+
       // Show success notification
       _showAnimatedSnackBar(
         'Request sent successfully!',
         _accentColor,
         Icons.check_circle,
       );
-      
+
     } catch (e) {
       _showAnimatedSnackBar(
         'Error: ${e.toString()}',
@@ -275,6 +307,26 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
         Icons.error,
       );
     }
+  }
+
+  String _substituteVariables(String text, List<dynamic> variables) {
+    String result = text;
+    for (var variable in variables) {
+      final key = '{{${variable['key'] ?? variable['name']}}}';
+      final value = variable['value']?.toString() ?? '';
+      result = result.replaceAll(key, value);
+    }
+    return result;
+  }
+
+  Map<String, dynamic> _substituteVariablesInMap(Map<String, dynamic> map, List<dynamic> variables) {
+    final result = <String, dynamic>{};
+    map.forEach((key, value) {
+      final substitutedKey = _substituteVariables(key, variables);
+      final substitutedValue = _substituteVariables(value.toString(), variables);
+      result[substitutedKey] = substitutedValue;
+    });
+    return result;
   }
 
   void _showAnimatedSnackBar(String message, Color color, IconData icon) {
@@ -504,8 +556,8 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<WorkspaceProvider, CollectionProvider, RequestProvider>(
-      builder: (context, workspaceProvider, collectionProvider, requestProvider, child) {
+    return Consumer4<WorkspaceProvider, CollectionProvider, RequestProvider, EnvironmentProvider>(
+      builder: (context, workspaceProvider, collectionProvider, requestProvider, environmentProvider, child) {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           decoration: BoxDecoration(
@@ -1257,55 +1309,57 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
             const SizedBox(width: 16),
             
             // Method Selector
-            Container(
+            SizedBox(
               width: 100,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: _isDarkMode ? Colors.grey[800] : Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: DropdownButton<String>(
-                value: selectedMethod,
-                underline: const SizedBox(),
-                isExpanded: true,
-                icon: Icon(
-                  Icons.arrow_drop_down_rounded,
-                  color: _getMethodColor(selectedMethod),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: _isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: _getMethodColor(selectedMethod),
-                ),
-                items: methods.map((method) {
-                  return DropdownMenuItem(
-                    value: method,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: _getMethodColor(method),
-                            shape: BoxShape.circle,
+                child: DropdownButton<String>(
+                  value: selectedMethod,
+                  underline: const SizedBox(),
+                  isExpanded: true,
+                  icon: Icon(
+                    Icons.arrow_drop_down_rounded,
+                    color: _getMethodColor(selectedMethod),
+                  ),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: _getMethodColor(selectedMethod),
+                  ),
+                  items: methods.map((method) {
+                    return DropdownMenuItem(
+                      value: method,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: _getMethodColor(method),
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(method),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedMethod = value!;
-                  });
-                },
+                          const SizedBox(width: 8),
+                          Text(method),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedMethod = value!;
+                    });
+                  },
+                ),
               ),
             ),
-            
-            const SizedBox(width: 16),
-            
+
+            const SizedBox(width: 12),
+
             // URL Input with advanced features
             Expanded(
               child: Container(
@@ -1366,78 +1420,87 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
                 ),
               ),
             ),
-            
-            const SizedBox(width: 16),
-            
+
+            const SizedBox(width: 12),
+
             // Environment Selector
-            Container(
-              width: 160,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: _isDarkMode ? Colors.grey[800] : Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: DropdownButton<String>(
-                value: selectedEnvironment,
-                underline: const SizedBox(),
-                isExpanded: true,
-                icon: Icon(
-                  Icons.arrow_drop_down_rounded,
-                  color: _isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            SizedBox(
+              width: 140,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: _isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _isDarkMode ? Colors.white : Colors.black,
-                ),
-                items: [
-                  'No Environment',
-                  'Development',
-                  'Staging',
-                  'Production',
-                  'Testing',
-                ].map((env) {
-                  return DropdownMenuItem(
-                    value: env,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _getEnvironmentColor(env),
+                child: DropdownButton<String>(
+                  value: selectedEnvironment,
+                  underline: const SizedBox(),
+                  isExpanded: true,
+                  icon: Icon(
+                    Icons.arrow_drop_down_rounded,
+                    color: _isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _isDarkMode ? Colors.white : Colors.black,
+                  ),
+                  items: [
+                    'No Environment',
+                    'Development',
+                    'Staging',
+                    'Production',
+                    'Testing',
+                  ].map((env) {
+                    return DropdownMenuItem(
+                      value: env,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            margin: const EdgeInsets.only(right: 6),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _getEnvironmentColor(env),
+                            ),
                           ),
-                        ),
-                        Text(env),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedEnvironment = value!;
-                  });
-                },
+                          Flexible(child: Text(env, overflow: TextOverflow.ellipsis)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedEnvironment = value!;
+                    });
+                  },
+                ),
               ),
             ),
-            
-            const SizedBox(width: 16),
-            
-            // Action Buttons
-            _buildActionButton(
-              'Save',
-              Icons.save_rounded,
-              _secondaryColor,
-              onPressed: () {},
-            ),
+
             const SizedBox(width: 8),
-            _buildActionButton(
-              'Copy',
-              Icons.copy_rounded,
-              _accentColor,
-              onPressed: () {},
+
+            // Action Buttons (wrapped in Flexible to prevent overflow)
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildActionButton(
+                    'Save',
+                    Icons.save_rounded,
+                    _secondaryColor,
+                    onPressed: () {},
+                  ),
+                  const SizedBox(width: 4),
+                  _buildActionButton(
+                    'Copy',
+                    Icons.copy_rounded,
+                    _accentColor,
+                    onPressed: () {},
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1635,8 +1698,8 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
                   ),
                 ),
               ),
-              SizedBox(
-                width: 200,
+              Flexible(
+                flex: 2,
                 child: Text(
                   'KEY',
                   style: TextStyle(
@@ -1648,6 +1711,7 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
                 ),
               ),
               Expanded(
+                flex: 3,
                 child: Text(
                   'VALUE',
                   style: TextStyle(
@@ -1658,8 +1722,8 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
                   ),
                 ),
               ),
-              SizedBox(
-                width: 200,
+              Flexible(
+                flex: 2,
                 child: Text(
                   'DESCRIPTION',
                   style: TextStyle(
@@ -1985,20 +2049,21 @@ class _RequestStudioScreenState extends State<RequestStudioScreen>
                           ),
                         ),
                       ),
-                      padding: const EdgeInsets.only(top: 16, right: 8),
-                      child: ListView.builder(
-                        itemCount: 50,
-                        itemBuilder: (context, index) {
-                          return Text(
-                            '${index + 1}',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: _isDarkMode ? Colors.grey[500] : Colors.grey[400],
-                            ),
-                          );
-                        },
-                      ),
+                  padding: const EdgeInsets.only(top: 16, right: 8),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: 50,
+                    itemBuilder: (context, index) {
+                      return Text(
+                        '${index + 1}',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _isDarkMode ? Colors.grey[500] : Colors.grey[400],
+                        ),
+                      );
+                    },
+                  ),
                     ),
                   ),
                 ],

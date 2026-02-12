@@ -55,7 +55,7 @@ class _CollectionsScreenState extends State<CollectionsScreen> {
 
   Future<void> _showCreateCollectionDialog() async {
     final workspaceProvider = Provider.of<WorkspaceProvider>(context, listen: false);
-    
+
     if (workspaceProvider.selectedWorkspaceId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a workspace first')),
@@ -106,8 +106,8 @@ class _CollectionsScreenState extends State<CollectionsScreen> {
               final success = await collectionProvider.createCollection(
                 workspaceProvider.selectedWorkspaceId!,
                 _nameController.text,
-                description: _descriptionController.text.isEmpty 
-                    ? null 
+                description: _descriptionController.text.isEmpty
+                    ? null
                     : _descriptionController.text,
               );
 
@@ -135,6 +135,130 @@ class _CollectionsScreenState extends State<CollectionsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _showUpdateCollectionDialog(Map<String, dynamic> collection) async {
+    final workspaceProvider = Provider.of<WorkspaceProvider>(context, listen: false);
+    _nameController.text = collection['name'] ?? '';
+    _descriptionController.text = collection['description'] ?? '';
+
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Update Collection'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Collection Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (_nameController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a name')),
+                );
+                return;
+              }
+
+              final collectionProvider = Provider.of<CollectionProvider>(context, listen: false);
+              final success = await collectionProvider.updateCollection(
+                workspaceProvider.selectedWorkspaceId!,
+                collection['id'],
+                _nameController.text,
+                description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+              );
+
+              if (success) {
+                _nameController.clear();
+                _descriptionController.clear();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Collection updated!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(collectionProvider.errorMessage ?? 'Failed to update collection'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showDeleteCollectionDialog(Map<String, dynamic> collection) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Collection'),
+        content: Text('Delete "${collection['name']}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final workspaceProvider = Provider.of<WorkspaceProvider>(context, listen: false);
+      final collectionProvider = Provider.of<CollectionProvider>(context, listen: false);
+      final success = await collectionProvider.deleteCollection(
+        workspaceProvider.selectedWorkspaceId!,
+        collection['id'],
+      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Collection deleted!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(collectionProvider.errorMessage ?? 'Failed to delete collection'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
