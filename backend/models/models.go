@@ -30,6 +30,11 @@ type Workspace struct {
 	CreatedAt   time.Time         `json:"created_at"`
 	UpdatedAt   time.Time         `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt    `gorm:"index" json:"-"`
+
+	// New Fields Added Here
+	Type       string `gorm:"type:varchar(50);default:'internal'" json:"type"`
+	IsPublic   bool   `gorm:"default:false" json:"is_public"`
+	AccessType string `gorm:"type:varchar(50);default:'team'" json:"access_type"`
 }
 
 // WorkspaceMember represents workspace membership

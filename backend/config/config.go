@@ -19,6 +19,7 @@ type Config struct {
 	LogLevel          string
 	TraceStorageDir   string
 	MaxReplayWorkers  int
+	EncryptionKey     string
 }
 
 func Load() *Config {
@@ -36,6 +37,7 @@ func Load() *Config {
 		LogLevel:          getEnv("LOG_LEVEL", "info"),
 		TraceStorageDir:   getEnv("TRACE_STORAGE_DIR", "./traces"),
 		MaxReplayWorkers:  10,
+		EncryptionKey:     getEnv("ENCRYPTION_KEY", "default-encryption-key-change-in-production"),
 	}
 
 	// Validate required fields

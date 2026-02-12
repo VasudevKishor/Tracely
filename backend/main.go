@@ -38,37 +38,63 @@ func main() {
 	}
 
 	// Initialize services
+	alertingService := services.NewAlertingService(db)
+	auditService := services.NewAuditService(db)
 	authService := services.NewAuthService(db, cfg)
-	workspaceService := services.NewWorkspaceService(db)
 	collectionService := services.NewCollectionService(db)
-	requestService := services.NewRequestService(db)
-	traceService := services.NewTraceService(db)
-	monitoringService := services.NewMonitoringService(db)
-	governanceService := services.NewGovernanceService(db)
-	settingsService := services.NewSettingsService(db)
-	replayService := services.NewReplayService(db)
-	mockService := services.NewMockService(db)
 	environmentService := services.NewEnvironmentService(db)
+	failureInjectionService := services.NewFailureInjectionService(db)
+	governanceService := services.NewGovernanceService(db)
+	loadTestService := services.NewLoadTestService(db)
+	mockService := services.NewMockService(db)
+	monitoringService := services.NewMonitoringService(db)
+	mutationService := services.NewMutationService()
+	percentileCalculator := services.NewPercentileCalculator()
+	replayService := services.NewReplayService(db)
+	requestService := services.NewRequestService(db)
+	schemaValidator := services.NewSchemaValidator()
+	secretsService := services.NewSecretsService(db, cfg.EncryptionKey)
+	settingsService := services.NewSettingsService(db)
+	testDataGenerator := services.NewTestDataGenerator()
+	traceService := services.NewTraceService(db)
 	tracingConfigService := services.NewTracingConfigService(db)
+	waterfallService := services.NewWaterfallService(db)
+	webhookService := services.NewWebhookService(db)
+	workflowService := services.NewWorkflowService(db)
+	workspaceService := services.NewWorkspaceService(db)
 
 	// Initialize handlers
+	alertHandler := handlers.NewAlertHandler(alertingService)
+	auditHandler := handlers.NewAuditHandler(auditService)
 	authHandler := handlers.NewAuthHandler(authService)
-	workspaceHandler := handlers.NewWorkspaceHandler(workspaceService)
 	collectionHandler := handlers.NewCollectionHandler(collectionService)
-	requestHandler := handlers.NewRequestHandler(requestService)
-	traceHandler := handlers.NewTraceHandler(traceService)
-	monitoringHandler := handlers.NewMonitoringHandler(monitoringService)
-	governanceHandler := handlers.NewGovernanceHandler(governanceService)
-	settingsHandler := handlers.NewSettingsHandler(settingsService)
-	replayHandler := handlers.NewReplayHandler(replayService)
-	mockHandler := handlers.NewMockHandler(mockService)
 	environmentHandler := handlers.NewEnvironmentHandler(environmentService)
+	failureInjectionHandler := handlers.NewFailureInjectionHandler(failureInjectionService)
+	governanceHandler := handlers.NewGovernanceHandler(governanceService)
+	loadTestHandler := handlers.NewLoadTestHandler(loadTestService)
+	mockHandler := handlers.NewMockHandler(mockService)
+	monitoringHandler := handlers.NewMonitoringHandler(monitoringService)
+	mutationHandler := handlers.NewMutationHandler(mutationService)
+	percentileCalculatorHandler := handlers.NewPercentileCalculatorHandler(percentileCalculator)
+	replayHandler := handlers.NewReplayHandler(replayService)
+	requestHandler := handlers.NewRequestHandler(requestService)
+	schemaValidatorHandler := handlers.NewSchemaValidatorHandler(schemaValidator)
+	secretsHandler := handlers.NewSecretsHandler(secretsService)
+	settingsHandler := handlers.NewSettingsHandler(settingsService)
+	testDataGeneratorHandler := handlers.NewTestDataGeneratorHandler(testDataGenerator)
+	traceHandler := handlers.NewTraceHandler(traceService)
 	tracingConfigHandler := handlers.NewTracingConfigHandler(tracingConfigService)
+	waterfallHandler := handlers.NewWaterfallHandler(waterfallService)
+	webhookHandler := handlers.NewWebhookHandler(webhookService)
+	workflowHandler := handlers.NewWorkflowHandler(workflowService)
+	workspaceHandler := handlers.NewWorkspaceHandler(workspaceService)
 
 	// Setup router
-	router := setupRouter(cfg, authService, authHandler, workspaceHandler, collectionHandler,
-		requestHandler, traceHandler, monitoringHandler, governanceHandler, settingsHandler,
-		replayHandler, mockHandler, environmentHandler, tracingConfigHandler)
+	router := setupRouter(cfg, authService, alertHandler, auditHandler, authHandler, collectionHandler,
+		environmentHandler, failureInjectionHandler, governanceHandler, loadTestHandler, mockHandler,
+		monitoringHandler, mutationHandler, percentileCalculatorHandler, replayHandler, requestHandler,
+		schemaValidatorHandler, secretsHandler, settingsHandler, testDataGeneratorHandler, traceHandler,
+		tracingConfigHandler, waterfallHandler, webhookHandler, workflowHandler, workspaceHandler)
 
 	// Create server
 	srv := &http.Server{
@@ -104,18 +130,30 @@ func main() {
 }
 
 func setupRouter(cfg *config.Config, authService *services.AuthService,
+	alertHandler *handlers.AlertHandler,
+	auditHandler *handlers.AuditHandler,
 	authHandler *handlers.AuthHandler,
-	workspaceHandler *handlers.WorkspaceHandler,
 	collectionHandler *handlers.CollectionHandler,
-	requestHandler *handlers.RequestHandler,
-	traceHandler *handlers.TraceHandler,
-	monitoringHandler *handlers.MonitoringHandler,
-	governanceHandler *handlers.GovernanceHandler,
-	settingsHandler *handlers.SettingsHandler,
-	replayHandler *handlers.ReplayHandler,
-	mockHandler *handlers.MockHandler,
 	environmentHandler *handlers.EnvironmentHandler,
-	tracingConfigHandler *handlers.TracingConfigHandler) *gin.Engine {
+	failureInjectionHandler *handlers.FailureInjectionHandler,
+	governanceHandler *handlers.GovernanceHandler,
+	loadTestHandler *handlers.LoadTestHandler,
+	mockHandler *handlers.MockHandler,
+	monitoringHandler *handlers.MonitoringHandler,
+	mutationHandler *handlers.MutationHandler,
+	percentileCalculatorHandler *handlers.PercentileCalculatorHandler,
+	replayHandler *handlers.ReplayHandler,
+	requestHandler *handlers.RequestHandler,
+	schemaValidatorHandler *handlers.SchemaValidatorHandler,
+	secretsHandler *handlers.SecretsHandler,
+	settingsHandler *handlers.SettingsHandler,
+	testDataGeneratorHandler *handlers.TestDataGeneratorHandler,
+	traceHandler *handlers.TraceHandler,
+	tracingConfigHandler *handlers.TracingConfigHandler,
+	waterfallHandler *handlers.WaterfallHandler,
+	webhookHandler *handlers.WebhookHandler,
+	workflowHandler *handlers.WorkflowHandler,
+	workspaceHandler *handlers.WorkspaceHandler) *gin.Engine {
 
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -243,6 +281,53 @@ func setupRouter(cfg *config.Config, authService *services.AuthService,
 				workspaces.GET("/:workspace_id/tracing/enabled-services", tracingConfigHandler.GetEnabledServices)
 				workspaces.GET("/:workspace_id/tracing/disabled-services", tracingConfigHandler.GetDisabledServices)
 				workspaces.GET("/:workspace_id/tracing/check", tracingConfigHandler.CheckTracingEnabled)
+
+				// ========== AUDIT ROUTES ==========
+				workspaces.GET("/:workspace_id/audit/logs", auditHandler.GetLogs)
+				workspaces.POST("/:workspace_id/audit/anomalies/:target_user_id", auditHandler.DetectAnomalies)
+
+				// ========== FAILURE INJECTION ROUTES ==========
+				workspaces.POST("/:workspace_id/failure-injection/rules", failureInjectionHandler.CreateRule)
+
+				// ========== MUTATION ROUTES ==========
+				workspaces.POST("/:workspace_id/mutations/apply", mutationHandler.ApplyMutations)
+
+				// ========== PERCENTILE CALCULATOR ROUTES ==========
+				workspaces.POST("/:workspace_id/percentiles/calculate", percentileCalculatorHandler.CalculatePercentiles)
+
+				// ========== SCHEMA VALIDATOR ROUTES ==========
+				workspaces.POST("/:workspace_id/schema/validate", schemaValidatorHandler.ValidateSchema)
+
+				// ========== TEST DATA GENERATOR ROUTES ==========
+				// 1. Ensure the schema generation path matches Flutter
+				workspaces.POST("/:workspace_id/test-data/generate", testDataGeneratorHandler.GenerateFromSchema)
+
+				// 2. Add the missing route for realistic data (user, product, etc.)
+				workspaces.GET("/:workspace_id/test-data/realistic/:type", testDataGeneratorHandler.GenerateRealisticData)
+
+				// ========== WATERFALL ROUTES ==========
+				workspaces.GET("/:workspace_id/traces/:trace_id/waterfall", waterfallHandler.GetWaterfall)
+
+				// ========== ALERT ROUTES ==========
+				workspaces.POST("/:workspace_id/alerts/rules", alertHandler.CreateRule)
+				workspaces.GET("/:workspace_id/alerts/active", alertHandler.GetActiveAlerts)
+				workspaces.POST("/:workspace_id/alerts/:alert_id/acknowledge", alertHandler.AcknowledgeAlert)
+
+				// ========== LOAD TEST ROUTES ==========
+				workspaces.POST("/:workspace_id/load-tests", loadTestHandler.Create)
+
+				// ========== SECRETS ROUTES ==========
+				workspaces.POST("/:workspace_id/secrets", secretsHandler.Create)
+				workspaces.GET("/:workspace_id/secrets/:secret_id", secretsHandler.GetValue)
+				workspaces.POST("/:workspace_id/secrets/:secret_id/rotate", secretsHandler.Rotate)
+
+				// ========== WEBHOOK ROUTES ==========
+				workspaces.POST("/:workspace_id/webhooks", webhookHandler.Create)
+				workspaces.POST("/:workspace_id/webhooks/trigger", webhookHandler.Trigger)
+
+				// ========== WORKFLOW ROUTES ==========
+				workspaces.POST("/:workspace_id/workflows", workflowHandler.Create)
+				workspaces.POST("/:workspace_id/workflows/:workflow_id/execute", workflowHandler.Execute)
 			}
 
 			// User settings routes
