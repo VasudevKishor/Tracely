@@ -1,58 +1,71 @@
 package handlers
 
 import (
-	"backend/middlewares"
-	"backend/services"
+	"backend/middlewares" // Custom middlewares to extract user info
+	"backend/services"    // Services layer for business logic
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
+// EnvironmentHandler handles HTTP requests related to environments
 type EnvironmentHandler struct {
 	environmentService *services.EnvironmentService
 }
 
+// Constructor for EnvironmentHandler
 func NewEnvironmentHandler(environmentService *services.EnvironmentService) *EnvironmentHandler {
 	return &EnvironmentHandler{environmentService: environmentService}
 }
 
+// Request structs for creating and updating environments and variables
+
+// CreateEnvironmentRequest represents the payload for creating a new environment
 type CreateEnvironmentRequest struct {
-	Name        string `json:"name" binding:"required"`
-	Type        string `json:"type" binding:"required"`
-	Description string `json:"description"`
-	IsActive    bool   `json:"is_active"`
+	Name        string `json:"name" binding:"required"` // Environment name (required)
+	Type        string `json:"type" binding:"required"` // Environment type: global, development, staging, production (required)
+	Description string `json:"description"`             // Optional description
+	IsActive    bool   `json:"is_active"`               // Optional active flag
 }
 
+// UpdateEnvironmentRequest represents the payload for updating an existing environment
 type UpdateEnvironmentRequest struct {
-	Name        string `json:"name"`
-	Type        string `json:"type"`
-	Description string `json:"description"`
-	IsActive    *bool  `json:"is_active"`
+	Name        string `json:"name"`        // New name
+	Type        string `json:"type"`        // New type
+	Description string `json:"description"` // New description
+	IsActive    *bool  `json:"is_active"`   // Pointer to allow optional boolean
 }
 
+// CreateEnvironmentVariableRequest represents the payload for adding/updating environment variables
 type CreateEnvironmentVariableRequest struct {
-	Key         string `json:"key" binding:"required"`
-	Value       string `json:"value" binding:"required"`
-	Type        string `json:"type"` // string, number, boolean, json
-	Description string `json:"description"`
+	Key         string `json:"key" binding:"required"`   // Variable key (required)
+	Value       string `json:"value" binding:"required"` // Variable value (required)
+	Type        string `json:"type"`                     // Type: string, number, boolean, json
+	Description string `json:"description"`              // Optional description
 }
+
+// ----------------------------------------
+// Handlers for Environment CRUD operations
+// ----------------------------------------
 
 // GetEnvironments returns all environments for a workspace
 func (h *EnvironmentHandler) GetEnvironments(c *gin.Context) {
-	userID, _ := middlewares.GetUserID(c)
-	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
+	userID, _ := middlewares.GetUserID(c)                   // Get user ID from context (middleware)
+	workspaceID, err := uuid.Parse(c.Param("workspace_id")) // Parse workspace UUID from URL
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workspace ID"})
 		return
 	}
 
+	// Fetch all environments for this workspace and user
 	environments, err := h.environmentService.GetAll(workspaceID, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Return environments as JSON
 	c.JSON(http.StatusOK, gin.H{
 		"environments": environments,
 	})
@@ -68,6 +81,7 @@ func (h *EnvironmentHandler) CreateEnvironment(c *gin.Context) {
 	}
 
 	var req CreateEnvironmentRequest
+	// Bind and validate JSON payload
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -85,9 +99,11 @@ func (h *EnvironmentHandler) CreateEnvironment(c *gin.Context) {
 		return
 	}
 
+	// Call service layer to create environment
 	environment, err := h.environmentService.Create(workspaceID, req.Name, req.Type, req.Description, req.IsActive, userID)
 	if err != nil {
 		status := http.StatusInternalServerError
+		// Handle duplicate name error
 		if err.Error() == "duplicate key value violates unique constraint" {
 			status = http.StatusConflict
 		}
@@ -95,6 +111,7 @@ func (h *EnvironmentHandler) CreateEnvironment(c *gin.Context) {
 		return
 	}
 
+	// Return newly created environment
 	c.JSON(http.StatusCreated, gin.H{
 		"environment": environment,
 	})
@@ -121,6 +138,7 @@ func (h *EnvironmentHandler) UpdateEnvironment(c *gin.Context) {
 		return
 	}
 
+	// Prepare updates map for service layer
 	updates := make(map[string]interface{})
 	if req.Name != "" {
 		updates["name"] = req.Name
@@ -146,6 +164,7 @@ func (h *EnvironmentHandler) UpdateEnvironment(c *gin.Context) {
 		updates["is_active"] = *req.IsActive
 	}
 
+	// Call service layer to apply updates
 	environment, err := h.environmentService.Update(workspaceID, environmentID, userID, updates)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -172,6 +191,7 @@ func (h *EnvironmentHandler) DeleteEnvironment(c *gin.Context) {
 		return
 	}
 
+	// Call service layer to delete environment
 	if err := h.environmentService.Delete(workspaceID, environmentID, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -182,7 +202,11 @@ func (h *EnvironmentHandler) DeleteEnvironment(c *gin.Context) {
 	})
 }
 
-// GetEnvironmentVariables returns variables for an environment
+// ----------------------------------------
+// Handlers for Environment Variables CRUD
+// ----------------------------------------
+
+// GetEnvironmentVariables returns variables and secrets for an environment
 func (h *EnvironmentHandler) GetEnvironmentVariables(c *gin.Context) {
 	userID, _ := middlewares.GetUserID(c)
 	workspaceID, err := uuid.Parse(c.Param("workspace_id"))
@@ -211,6 +235,7 @@ func (h *EnvironmentHandler) GetEnvironmentVariables(c *gin.Context) {
 		return
 	}
 
+	// Return environment with variables and secrets
 	c.JSON(http.StatusOK, gin.H{
 		"environment": gin.H{
 			"id":          environment.ID,
@@ -242,14 +267,17 @@ func (h *EnvironmentHandler) AddEnvironmentVariable(c *gin.Context) {
 	}
 
 	var req CreateEnvironmentVariableRequest
+	// Bind and validate JSON
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Call service layer to add variable
 	variable, err := h.environmentService.AddVariable(workspaceID, environmentID, req.Key, req.Value, req.Type, req.Description, userID)
 	if err != nil {
 		status := http.StatusInternalServerError
+		// Handle duplicate key error
 		if err.Error() == "duplicate key value violates unique constraint" {
 			status = http.StatusConflict
 		}
@@ -289,6 +317,7 @@ func (h *EnvironmentHandler) UpdateEnvironmentVariable(c *gin.Context) {
 		return
 	}
 
+	// Prepare updates map
 	updates := make(map[string]interface{})
 	if req.Key != "" {
 		updates["key"] = req.Key
@@ -303,6 +332,7 @@ func (h *EnvironmentHandler) UpdateEnvironmentVariable(c *gin.Context) {
 		updates["description"] = req.Description
 	}
 
+	// Call service layer to update variable
 	variable, err := h.environmentService.UpdateVariable(workspaceID, environmentID, variableID, userID, updates)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -335,6 +365,7 @@ func (h *EnvironmentHandler) DeleteEnvironmentVariable(c *gin.Context) {
 		return
 	}
 
+	// Call service layer to delete variable
 	if err := h.environmentService.DeleteVariable(workspaceID, environmentID, variableID, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

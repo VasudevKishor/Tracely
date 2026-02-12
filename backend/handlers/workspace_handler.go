@@ -27,33 +27,34 @@ func NewWorkspaceHandler(workspaceService *services.WorkspaceService) *Workspace
 }
 
 // CreateWorkspaceRequest defines the payload for creating or updating a workspace
+// Update the struct to include the new fields
 type CreateWorkspaceRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
+	Type        string `json:"type"`        // Added
+	IsPublic    bool   `json:"is_public"`   // Added
+	AccessType  string `json:"access_type"` // Added
 }
 
-// Create handles POST /workspaces
-// It creates a new workspace for the authenticated user
 func (h *WorkspaceHandler) Create(c *gin.Context) {
-	// Get the authenticated user's ID from the context
 	userID, err := middlewares.GetUserID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	// Bind JSON payload to struct
+
 	var req CreateWorkspaceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Call service to create workspace
-	workspace, err := h.workspaceService.Create(req.Name, req.Description, userID)
+
+	// UPDATE THIS LINE: You need to update your Service method signature as well
+	workspace, err := h.workspaceService.Create(req.Name, req.Description, req.Type, req.IsPublic, req.AccessType, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	// Return created workspace with HTTP 201
 	c.JSON(http.StatusCreated, workspace)
 }
 
