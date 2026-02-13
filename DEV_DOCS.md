@@ -259,15 +259,19 @@ Use the **bottom bar** in the app: tap **☰** next to “WIREFRAME NAV:” and 
 
 ## Running Tests
 
-**All tests (backend + frontend):**
+**All unit tests (backend Go + frontend Flutter) — from repo root:**
 
 ```bash
+make test
+# or
 ./run_all_tests.sh
 ```
 
-**With API smoke test (backend must be running on 8081):**
+**All unit tests + API smoke (backend must be running on 8081):**
 
 ```bash
+make test-api
+# or
 ./run_all_tests.sh --api
 ```
 
