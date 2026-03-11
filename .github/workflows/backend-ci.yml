@@ -1,0 +1,45 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ subiksha_web__updated ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ subiksha_web_updated ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  build-and-test:
+    name: Build & Test Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+        cache-dependency-path: backend/go.sum
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Vet / Lint
+      run: go vet ./...
+
+    - name: Test
+      run: go test -v ./...
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test Docker Build
+      run: docker build -t tracely-backend .
