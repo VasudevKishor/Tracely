@@ -1,0 +1,47 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ subiksha_web_updated ]
+    paths:
+      - 'frontend_1/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [ subiksha_web_updated ]
+    paths:
+      - 'frontend_1/**'
+      - '.github/workflows/frontend-ci.yml'
+
+jobs:
+  build-and-test:
+    name: Build & Test Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend_1
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+        flutter-version: '3.27.0'
+
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Analyze project source
+      run: flutter analyze
+
+    - name: Run tests
+      run: |
+        if [ -d "test" ]; then
+          flutter test
+        else
+          echo "No tests found, skipping"
+        fi
+
+    - name: Build Web
+      run: flutter build web
